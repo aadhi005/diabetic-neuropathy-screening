@@ -1,93 +1,111 @@
 {
   "version": 1,
-  "source": "synthetic",
+  "source": "real:vasoreg:GE-71_Data_Summary_Table.csv",
   "feature_names": [
-    "gait_cadence",
-    "gait_stride_time",
-    "gait_swing_ratio",
-    "gait_double_support",
-    "gait_shank_rom",
-    "gait_thigh_rom",
-    "press_forefoot_peak",
-    "press_midfoot_mean",
-    "press_heel_peak",
-    "hrv_mean_rr",
-    "hrv_sdrr",
-    "hrv_rmssd",
-    "hrv_lfhf"
+    "VM RATIO",
+    "DBP II",
+    "DBP IV",
+    "VMR sys_BP",
+    "VMR dia_BP",
+    "VMR mn_BP",
+    "HR(Baseline MR)",
+    "sys_BP(Baseline MR)",
+    "dia_BP(Baseline MR)",
+    "mn_BP(Baseline MR)",
+    "HR(HyperMean)",
+    "sys_Bp(HyperMean)",
+    "dia_BP(HyperMean)",
+    "mn_BP(HyperMean)",
+    "HR(Hypo Mean)",
+    "sys_BP(Hypo Mean)",
+    "dia_BP(Hypo Mean)",
+    "mn_BP(Hypo Mean)",
+    "HR TILT BASELINE",
+    "SBP TILT BASELINE1",
+    "DBP TILT BASELINE1",
+    "HR(Tilt MN)",
+    "sys_BP(Tilt MN)",
+    "dia_BP(Tilt MN)",
+    "mn_BP(Tilt MN)",
+    "Change Baseline To Tilt Mean BP",
+    "Change Baseline to HypoTilt Mean BP",
+    "SPEED(m/s)"
   ],
   "classes": [
-    "CAN",
-    "DPN",
-    "Healthy"
+    "Control",
+    "Diabetic"
   ],
   "cv": {
     "scheme": "leave-one-subject-out",
-    "accuracy": 0.9829059829059829,
+    "accuracy": 0.7,
     "per_class": {
-      "Healthy": {
-        "precision": 0.9473684210526315,
-        "sensitivity": 1.0,
-        "specificity": 0.9753086419753086,
-        "support": 36
+      "Control": {
+        "precision": 0.6842105263157895,
+        "sensitivity": 0.5909090909090909,
+        "specificity": 0.7857142857142857,
+        "support": 22
       },
-      "DPN": {
-        "precision": 1.0,
-        "sensitivity": 0.9705882352941176,
-        "specificity": 1.0,
-        "support": 68
-      },
-      "CAN": {
-        "precision": 1.0,
-        "sensitivity": 1.0,
-        "specificity": 1.0,
-        "support": 13
+      "Diabetic": {
+        "precision": 0.7096774193548387,
+        "sensitivity": 0.7857142857142857,
+        "specificity": 0.5909090909090909,
+        "support": 28
       }
     },
     "confusion": [
       [
-        36,
-        0,
-        0
+        13,
+        9
       ],
       [
-        2,
-        66,
-        0
-      ],
-      [
-        0,
-        0,
-        13
+        6,
+        22
       ]
     ],
     "labels": [
-      "Healthy",
-      "DPN",
-      "CAN"
+      "Control",
+      "Diabetic"
     ]
   },
   "report": {
-    "n_subjects": 117,
+    "dataset": "PhysioNet Cerebral Vasoregulation in Diabetes",
+    "path": "data/physionet_diabetes/GE-71_Data_Summary_Table.csv",
+    "n_subjects": 50,
     "features_present": [
-      "gait_cadence",
-      "gait_stride_time",
-      "gait_swing_ratio",
-      "gait_double_support",
-      "gait_shank_rom",
-      "gait_thigh_rom",
-      "press_forefoot_peak",
-      "press_midfoot_mean",
-      "press_heel_peak",
-      "hrv_mean_rr",
-      "hrv_sdrr",
-      "hrv_rmssd",
-      "hrv_lfhf"
+      "VM RATIO",
+      "DBP II",
+      "DBP IV",
+      "VMR sys_BP",
+      "VMR dia_BP",
+      "VMR mn_BP",
+      "HR(Baseline MR)",
+      "sys_BP(Baseline MR)",
+      "dia_BP(Baseline MR)",
+      "mn_BP(Baseline MR)",
+      "HR(HyperMean)",
+      "sys_Bp(HyperMean)",
+      "dia_BP(HyperMean)",
+      "mn_BP(HyperMean)",
+      "HR(Hypo Mean)",
+      "sys_BP(Hypo Mean)",
+      "dia_BP(Hypo Mean)",
+      "mn_BP(Hypo Mean)",
+      "HR TILT BASELINE",
+      "SBP TILT BASELINE1",
+      "DBP TILT BASELINE1",
+      "HR(Tilt MN)",
+      "sys_BP(Tilt MN)",
+      "dia_BP(Tilt MN)",
+      "mn_BP(Tilt MN)",
+      "Change Baseline To Tilt Mean BP",
+      "Change Baseline to HypoTilt Mean BP",
+      "SPEED(m/s)"
     ],
+    "features_missing_from_file": [],
     "class_counts": {
-      "Healthy": 36,
-      "DPN": 68,
-      "CAN": 13
-    }
+      "Control": 22,
+      "Diabetic": 28
+    },
+    "task": "Diabetic (autonomic-affected) vs Control"
   }
 }

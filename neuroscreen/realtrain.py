@@ -20,6 +20,7 @@ import os
 import joblib
 import numpy as np
 from sklearn.ensemble import GradientBoostingClassifier
+from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import LeaveOneOut, StratifiedKFold
 from sklearn.preprocessing import StandardScaler
 
@@ -31,8 +32,12 @@ MODEL_DIR = os.path.join(ROOT, "models")
 ARTIFACT = os.path.join(MODEL_DIR, "realmodel.joblib")
 
 
-def _load(data_path):
-    if data_path:
+def _load(data_path, dataset="auto"):
+    from . import realdata
+    if data_path and dataset in realdata.LOADERS:
+        X, y, names, report = realdata.LOADERS[dataset](data_path)
+        source = f"real:{dataset}:{os.path.basename(data_path)}"
+    elif data_path:
         X, y, names, report = ds.load_csv(data_path)
         source = f"real:{os.path.basename(data_path)}"
     else:
@@ -49,6 +54,34 @@ def _load(data_path):
     return X, y, names, report, source
 
 
+def make_classifier(n_samples):
+    """Pick a classifier matched to the sample size. Small real cohorts favour
+    a sparse, well-regularised linear model over deep boosting, which overfits
+    at n~50; larger sets use gradient boosting (Paper 2)."""
+    if n_samples < 120:
+        # Elastic-net (mostly L1) logistic regression: sparse feature selection
+        # that generalises better than deep boosting on small cohorts.
+        return LogisticRegression(C=0.5, l1_ratio=0.8, solver="saga",
+                                  max_iter=5000)
+    return GradientBoostingClassifier(n_estimators=200, learning_rate=0.08,
+                                      max_depth=3, subsample=0.9, random_state=0)
+
+
+def _importances(clf, names):
+    """Feature importances from tree importances or |linear coefficients|."""
+    if hasattr(clf, "feature_importances_"):
+        vals = np.asarray(clf.feature_importances_, float)
+    elif hasattr(clf, "coef_"):
+        c = np.abs(np.asarray(clf.coef_, float))
+        vals = c.mean(0) if c.ndim > 1 else c
+    else:
+        vals = np.ones(len(names))
+    vals = vals / (vals.sum() + 1e-12)
+    return sorted(({"feature": n, "importance": float(v)}
+                   for n, v in zip(names, vals)),
+                  key=lambda d: d["importance"], reverse=True)
+
+
 def _cv_eval(X, y, labels):
     """Leave-one-subject-out where feasible, else stratified 5-fold."""
     counts = {c: int(np.sum(y == c)) for c in labels}
@@ -58,9 +91,7 @@ def _cv_eval(X, y, labels):
     preds = np.empty(len(y), dtype=object)
     for tr, te in splitter.split(X, y):
         sc = StandardScaler().fit(X[tr])
-        clf = GradientBoostingClassifier(
-            n_estimators=200, learning_rate=0.08, max_depth=3,
-            subsample=0.9, random_state=0).fit(sc.transform(X[tr]), y[tr])
+        clf = make_classifier(len(tr)).fit(sc.transform(X[tr]), y[tr])
         preds[te] = clf.predict(sc.transform(X[te]))
     acc, rows = per_class_metrics(y, preds, labels)
     scheme = "leave-one-subject-out" if use_loso else "stratified 5-fold"
@@ -68,12 +99,15 @@ def _cv_eval(X, y, labels):
 
 
 def main():
-    ap = argparse.ArgumentParser(description="Train the real wearable screening model.")
-    ap.add_argument("--data", help="path to wearable feature CSV (IEEE DataPort)")
+    ap = argparse.ArgumentParser(description="Train the real screening model.")
+    ap.add_argument("--data", help="path to a feature CSV")
+    ap.add_argument("--dataset", default="auto",
+                    help="known dataset loader: 'vasoreg' (PhysioNet diabetes), "
+                         "'paper2' (wearable schema), or 'auto' (default)")
     args = ap.parse_args()
 
-    labels = ds.CLASSES
-    X, y, names, report, source = _load(args.data)
+    X, y, names, report, source = _load(args.data, args.dataset)
+    labels = sorted(set(y))
     present = [c for c in labels if np.any(y == c)]
     print(f"\nTraining data: {len(y)} subjects x {len(names)} features "
           f"({source}); classes present: {present}")
@@ -86,11 +120,9 @@ def main():
         print(f"    {c:<8} sens={r['sensitivity']*100:4.0f}%  "
               f"spec={r['specificity']*100:4.0f}%  (n={r['support']})")
 
-    # Final model on all data.
+    # Final model on all data (same family used in CV).
     scaler = StandardScaler().fit(X)
-    clf = GradientBoostingClassifier(
-        n_estimators=200, learning_rate=0.08, max_depth=3,
-        subsample=0.9, random_state=0).fit(scaler.transform(X), y)
+    clf = make_classifier(len(X)).fit(scaler.transform(X), y)
 
     artifact = {
         "version": 1,
@@ -105,10 +137,7 @@ def main():
                         for j, n in enumerate(names)},
         "cohort_mean": X.mean(0).tolist(),
         "cohort_std": (X.std(0) + 1e-9).tolist(),
-        "importances": sorted(
-            ({"feature": n, "importance": float(v)}
-             for n, v in zip(names, clf.feature_importances_)),
-            key=lambda d: d["importance"], reverse=True),
+        "importances": _importances(clf, names),
         "cv": {"scheme": scheme, "accuracy": acc, "per_class": rows,
                "confusion": cm, "labels": present},
         "report": report,

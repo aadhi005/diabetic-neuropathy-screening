@@ -113,50 +113,55 @@ run.py           train (if needed) + serve the dashboard
 
 ---
 
-## Screening a real person (Paper 2 wearable pathway)
+## Screening a real person (real open data)
 
-The wearable pathway is the realistic route to screening an actual subject: it
-needs only IMUs, a plantar-pressure insole and an ECG/HRV strap — no force
-plate — and Paper 2's labelled dataset can train it on real patients.
+Paper 2's own dataset (IEEE DataPort, DOI 10.21227/f4jr-k711) is
+**subscription-gated** and could not be used. Instead the real-person pathway is
+trained on a fully open dataset with the same clinical intent:
 
-### Step 1 — get real labelled data
-Paper 2's dataset is on IEEE DataPort
-([DOI 10.21227/f4jr-k711](https://ieee-dataport.org/documents/ecg-imus-and-foot-plantar-pressure-signals-gait-and-health-monitoring)).
-It is **subscription-gated**, so it cannot be auto-downloaded — log in, download
-`Dataset_and_approval_letter.zip`, extract the feature CSV, and place it at
-`data/paper2.csv` (any column names; the loader maps them — see
-`neuroscreen/dataset.py::CANONICAL`).
+> **PhysioNet — Cerebral Vasoregulation in Diabetes** (CC-BY 4.0, no login):
+> 28 type-2 diabetic and 22 control adults with non-invasive **cardiac-autonomic
+> function** tests (Valsalva ratio, head-up-tilt HR/BP responses, orthostatic BP
+> change) and gait speed.
+
+This makes the real task **Diabetic (autonomic-affected) vs Control** — the
+autonomic axis of diabetic neuropathy, screenable with a bedside/wearable
+autonomic-reflex protocol.
+
+### Step 1 — get the data (open, ~130 KB)
+```bash
+python -m neuroscreen.fetch_data
+```
+Downloads the per-subject summary CSV from PhysioNet (see
+`data/physionet_diabetes/SOURCE.md` for attribution).
 
 ### Step 2 — train on real patients
 ```bash
-python -m neuroscreen.realtrain --data data/paper2.csv
+python -m neuroscreen.realtrain --dataset vasoreg \
+    --data data/physionet_diabetes/GE-71_Data_Summary_Table.csv
 ```
-This writes `models/realmodel.joblib` (scaler + gradient-boosting classifier +
-feature schema + cohort stats) and prints leave-one-subject-out accuracy and
-per-class sensitivity/specificity. Without `--data` it trains on the synthetic
-frame so you can try the flow immediately (results are clearly flagged as a
-demonstration).
+Writes `models/realmodel.joblib` and prints leave-one-subject-out metrics.
+**Honest performance: ~70% LOSO accuracy** (majority-class baseline 56%) — real
+biomedical data at n=50 is hard, unlike the synthetic demo. On small cohorts the
+trainer auto-selects a sparse elastic-net logistic model; larger sets use
+gradient boosting. Running `realtrain` with no `--data` falls back to a
+synthetic frame, clearly flagged.
 
 ### Step 3 — screen a subject
-Capture the subject's gait / plantar-pressure / HRV markers into a one-row CSV
-(use the template), then run the detector:
 ```bash
-python -m neuroscreen.detect --template data/subject.csv   # blank input to fill in
-python -m neuroscreen.detect --input   data/subject.csv    # screen
-python -m neuroscreen.detect --input   data/subject.csv --json
+python -m neuroscreen.detect --input data/real_test_subjects.csv        # report
+python -m neuroscreen.detect --input data/real_test_subjects.csv --json # machine
 ```
-Output: predicted class (Healthy / DPN / CAN), confidence, clinical risk level,
-the markers that most drove the decision (deviation from the healthy reference
-weighted by model importance), and a referral recommendation. Missing markers
-are imputed with the training-cohort median and reported.
+Output per subject: predicted class, confidence, clinical risk level, the
+markers that most drove the decision (deviation from the control reference
+weighted by model importance), and a recommendation. The detector matches your
+CSV's columns to the model's features by name and imputes anything missing.
 
-### From sensors to a CSV
-`detect.py` consumes *features*, not raw signals. A real capture rig computes
-them on-device or in a short pre-processing step: gait spatiotemporal +
-kinematic features from the two IMUs (heel-strike / toe-off via peak detection,
-per Paper 2), peak/mean pressure per foot region from the insole, and
-time/frequency HRV metrics (SDRR, rMSSD, SD1/SD2, LF/HF) from RR intervals via
-Pan–Tompkins. Emit one row per subject with those columns and feed it in.
+### Swapping in a different dataset
+`neuroscreen/realdata.py` holds the loader + curated feature list; add a loader
+to `LOADERS` and pass `--dataset <key>`. Paper-2-style wearable CSVs
+(gait/pressure/HRV, Healthy/DPN/CAN) are handled by the tolerant
+`neuroscreen/dataset.py` schema if you obtain that data.
 
 ---
 

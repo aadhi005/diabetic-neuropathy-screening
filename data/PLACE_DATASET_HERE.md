@@ -1,27 +1,31 @@
-# Where to put the real dataset
+# Real datasets for training the screening model
 
-The real-person screening model trains on **Paper 2's wearable feature
-dataset** (gait + plantar pressure + HRV, labelled Healthy / DPN / CAN):
+## Primary (open, no login) — used by default
 
-- IEEE DataPort — DOI **10.21227/f4jr-k711**
-- <https://ieee-dataport.org/documents/ecg-imus-and-foot-plantar-pressure-signals-gait-and-health-monitoring>
+**PhysioNet — Cerebral Vasoregulation in Diabetes** (CC-BY 4.0)
+28 diabetic + 22 control adults; non-invasive cardiac-autonomic tests + gait
+speed. Task: **Diabetic vs Control**.
 
-This dataset is **behind an IEEE DataPort subscription login**, so it cannot be
-downloaded automatically. Steps:
+```
+python -m neuroscreen.fetch_data      # downloads the ~130 KB summary CSV
+python -m neuroscreen.realtrain --dataset vasoreg \
+    --data data/physionet_diabetes/GE-71_Data_Summary_Table.csv
+```
 
-1. Log in to IEEE DataPort and download `Dataset_and_approval_letter.zip`.
-2. Extract it and find the feature CSV inside.
-3. Save that CSV here as **`data/paper2.csv`**.
-4. Train on real patients:
-   ```
-   python -m neuroscreen.realtrain --data data/paper2.csv
-   ```
+The two CSVs are committed under `data/physionet_diabetes/` for convenience
+(see `SOURCE.md` there for attribution), so you can train immediately.
 
-The loader (`neuroscreen/dataset.py`) is tolerant of column naming — it maps
-common spellings of gait / pressure / HRV markers onto its canonical schema and
-reports exactly what it recognised. If some columns aren't picked up, add their
-names to `SYNONYMS` in that file.
+## Optional — Paper 2's own dataset (gated)
 
-Until then, `python -m neuroscreen.realtrain` (no `--data`) trains on a
-synthetic stand-in so the pipeline is fully runnable, with results clearly
-flagged as a demonstration.
+**IEEE DataPort, DOI 10.21227/f4jr-k711** — gait + plantar pressure + HRV,
+labelled Healthy / DPN / CAN. Requires an IEEE DataPort **subscription login**,
+so it can't be auto-downloaded. If you have access: download
+`Dataset_and_approval_letter.zip`, extract the feature CSV to `data/paper2.csv`,
+then:
+
+```
+python -m neuroscreen.realtrain --data data/paper2.csv
+```
+
+The loader (`neuroscreen/dataset.py`) maps common column-name spellings onto its
+canonical gait/pressure/HRV schema and reports what it recognised.

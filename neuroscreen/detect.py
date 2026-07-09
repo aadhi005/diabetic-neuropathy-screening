@@ -18,6 +18,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 
 import joblib
 import numpy as np
@@ -28,11 +29,16 @@ from .realtrain import ARTIFACT
 
 RISK = {
     "Healthy": ("LOW", "No neuropathy indicators. Routine diabetic follow-up."),
+    "Control": ("LOW", "No diabetic-autonomic pattern detected. Routine follow-up."),
     "DPN": ("HIGH", "Peripheral-neuropathy pattern. Refer for nerve-conduction "
                     "study / monofilament testing and foot-care review."),
     "CAN": ("HIGH", "Autonomic (cardiac) pattern. Refer for cardiovascular "
                     "autonomic reflex testing; review orthostatic symptoms."),
+    "Diabetic": ("ELEVATED", "Autonomic/gait pattern consistent with diabetes-"
+                             "related dysfunction. Correlate clinically; consider "
+                             "autonomic reflex testing and neuropathy screening."),
 }
+_DEFAULT_RISK = ("REVIEW", "Result outside the standard classes; clinician review advised.")
 
 
 def load_model():
@@ -43,20 +49,33 @@ def load_model():
     return joblib.load(ARTIFACT)
 
 
+def _norm(s):
+    return re.sub(r"[^a-z0-9]", "", str(s).lower())
+
+
 def build_matrix(df: pd.DataFrame, model):
-    """Align an input dataframe to the model's feature order, mapping column
-    synonyms and imputing any missing markers with training medians."""
-    colmap = ds.map_columns(df.columns)          # source -> canonical
-    inv = {v: k for k, v in colmap.items()}
+    """Align an input dataframe to the model's feature order.
+
+    Matches each model feature to an input column by (1) normalised exact name
+    -- which covers models whose features are the dataset's own column names --
+    then (2) the canonical wearable synonym table. Missing markers are imputed
+    with the training-cohort median and reported.
+    """
     names = model["feature_names"]
     med = np.asarray(model["train_median"], float)
+    input_by_norm = {}
+    for c in df.columns:
+        input_by_norm.setdefault(_norm(c), c)
+    canon = ds.map_columns(df.columns)           # source -> canonical
+    canon_inv = {v: k for k, v in canon.items()}  # canonical -> source
+
     X = np.empty((len(df), len(names)), float)
     used, imputed = [], []
     for j, key in enumerate(names):
-        if key in inv:
-            col = pd.to_numeric(df[inv[key]], errors="coerce").to_numpy(float)
-            col = np.where(np.isnan(col), med[j], col)
-            X[:, j] = col
+        col = input_by_norm.get(_norm(key)) or canon_inv.get(key)
+        if col is not None:
+            v = pd.to_numeric(df[col], errors="coerce").to_numpy(float)
+            X[:, j] = np.where(np.isnan(v), med[j], v)
             used.append(key)
         else:
             X[:, j] = med[j]
@@ -97,8 +116,8 @@ def screen_one(x_row, model):
         "prediction": pred,
         "confidence": float(proba[order[0]]),
         "probabilities": {classes[i]: float(proba[i]) for i in order},
-        "risk_level": RISK.get(pred, ("-", ""))[0],
-        "recommendation": RISK.get(pred, ("-", ""))[1],
+        "risk_level": RISK.get(pred, _DEFAULT_RISK)[0],
+        "recommendation": RISK.get(pred, _DEFAULT_RISK)[1],
         "top_factors": explain(x_row, model, pred),
     }
 

@@ -10,3 +10,4 @@ data/new_patients.csv
 
 # local Claude Code settings
 .claude/settings.local.json
+data/real_test_subjects.csv
