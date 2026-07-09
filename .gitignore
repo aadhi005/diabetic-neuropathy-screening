@@ -7,7 +7,35 @@ venv/
 # regenerable artifacts / scratch
 models/*.joblib
 data/new_patients.csv
+data/real_test_subjects.csv
 
 # local Claude Code settings
 .claude/settings.local.json
-data/real_test_subjects.csv
+
+# LaTeX build byproducts (keep only the .tex source + images)
+*.aux
+*.log
+*.out
+*.toc
+*.nav
+*.snm
+*.vrb
+*.bbl
+*.blg
+*.dvi
+*.xdv
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+*.idx
+*.ilg
+*.ind
+*.thm
+*.bcf
+*.run.xml
+docs/**/*.pdf
+
+# other unwanted / scratch documents
+*.zip
+Thumbs.db
+desktop.ini
