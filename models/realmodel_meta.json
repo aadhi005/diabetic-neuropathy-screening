@@ -1,0 +1,93 @@
+{
+  "version": 1,
+  "source": "synthetic",
+  "feature_names": [
+    "gait_cadence",
+    "gait_stride_time",
+    "gait_swing_ratio",
+    "gait_double_support",
+    "gait_shank_rom",
+    "gait_thigh_rom",
+    "press_forefoot_peak",
+    "press_midfoot_mean",
+    "press_heel_peak",
+    "hrv_mean_rr",
+    "hrv_sdrr",
+    "hrv_rmssd",
+    "hrv_lfhf"
+  ],
+  "classes": [
+    "CAN",
+    "DPN",
+    "Healthy"
+  ],
+  "cv": {
+    "scheme": "leave-one-subject-out",
+    "accuracy": 0.9829059829059829,
+    "per_class": {
+      "Healthy": {
+        "precision": 0.9473684210526315,
+        "sensitivity": 1.0,
+        "specificity": 0.9753086419753086,
+        "support": 36
+      },
+      "DPN": {
+        "precision": 1.0,
+        "sensitivity": 0.9705882352941176,
+        "specificity": 1.0,
+        "support": 68
+      },
+      "CAN": {
+        "precision": 1.0,
+        "sensitivity": 1.0,
+        "specificity": 1.0,
+        "support": 13
+      }
+    },
+    "confusion": [
+      [
+        36,
+        0,
+        0
+      ],
+      [
+        2,
+        66,
+        0
+      ],
+      [
+        0,
+        0,
+        13
+      ]
+    ],
+    "labels": [
+      "Healthy",
+      "DPN",
+      "CAN"
+    ]
+  },
+  "report": {
+    "n_subjects": 117,
+    "features_present": [
+      "gait_cadence",
+      "gait_stride_time",
+      "gait_swing_ratio",
+      "gait_double_support",
+      "gait_shank_rom",
+      "gait_thigh_rom",
+      "press_forefoot_peak",
+      "press_midfoot_mean",
+      "press_heel_peak",
+      "hrv_mean_rr",
+      "hrv_sdrr",
+      "hrv_rmssd",
+      "hrv_lfhf"
+    ],
+    "class_counts": {
+      "Healthy": 36,
+      "DPN": 68,
+      "CAN": 13
+    }
+  }
+}

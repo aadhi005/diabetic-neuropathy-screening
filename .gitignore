@@ -3,3 +3,7 @@ __pycache__/
 .venv/
 venv/
 .DS_Store
+
+# regenerable artifacts / scratch
+models/*.joblib
+data/new_patients.csv

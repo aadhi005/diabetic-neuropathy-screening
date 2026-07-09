@@ -1,0 +1,2 @@
+gait_cadence,gait_stride_time,gait_swing_ratio,gait_double_support,gait_shank_rom,gait_thigh_rom,gait_mean_lin_accel,gait_mean_ang_vel,gait_vertical_accel_peak,press_forefoot_peak,press_forefoot_mean,press_midfoot_peak,press_midfoot_mean,press_heel_peak,press_heel_mean,hrv_mean_rr,hrv_sdrr,hrv_rmssd,hrv_sd1,hrv_sd2,hrv_sd1_sd2,hrv_lf,hrv_hf,hrv_lfhf,label
+,,,,,,,,,,,,,,,,,,,,,,,,Healthy
