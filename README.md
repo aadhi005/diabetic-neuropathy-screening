@@ -113,11 +113,61 @@ run.py           train (if needed) + serve the dashboard
 
 ---
 
-## Extending to real data
-Swap `build_cohort()` for a loader that reads real COP recordings and wearable
-CSVs, keep `extract_cop_features()` unchanged, and re-run
+## Screening a real person (Paper 2 wearable pathway)
+
+The wearable pathway is the realistic route to screening an actual subject: it
+needs only IMUs, a plantar-pressure insole and an ECG/HRV strap — no force
+plate — and Paper 2's labelled dataset can train it on real patients.
+
+### Step 1 — get real labelled data
+Paper 2's dataset is on IEEE DataPort
+([DOI 10.21227/f4jr-k711](https://ieee-dataport.org/documents/ecg-imus-and-foot-plantar-pressure-signals-gait-and-health-monitoring)).
+It is **subscription-gated**, so it cannot be auto-downloaded — log in, download
+`Dataset_and_approval_letter.zip`, extract the feature CSV, and place it at
+`data/paper2.csv` (any column names; the loader maps them — see
+`neuroscreen/dataset.py::CANONICAL`).
+
+### Step 2 — train on real patients
+```bash
+python -m neuroscreen.realtrain --data data/paper2.csv
+```
+This writes `models/realmodel.joblib` (scaler + gradient-boosting classifier +
+feature schema + cohort stats) and prints leave-one-subject-out accuracy and
+per-class sensitivity/specificity. Without `--data` it trains on the synthetic
+frame so you can try the flow immediately (results are clearly flagged as a
+demonstration).
+
+### Step 3 — screen a subject
+Capture the subject's gait / plantar-pressure / HRV markers into a one-row CSV
+(use the template), then run the detector:
+```bash
+python -m neuroscreen.detect --template data/subject.csv   # blank input to fill in
+python -m neuroscreen.detect --input   data/subject.csv    # screen
+python -m neuroscreen.detect --input   data/subject.csv --json
+```
+Output: predicted class (Healthy / DPN / CAN), confidence, clinical risk level,
+the markers that most drove the decision (deviation from the healthy reference
+weighted by model importance), and a referral recommendation. Missing markers
+are imputed with the training-cohort median and reported.
+
+### From sensors to a CSV
+`detect.py` consumes *features*, not raw signals. A real capture rig computes
+them on-device or in a short pre-processing step: gait spatiotemporal +
+kinematic features from the two IMUs (heel-strike / toe-off via peak detection,
+per Paper 2), peak/mean pressure per foot region from the insole, and
+time/frequency HRV metrics (SDRR, rMSSD, SD1/SD2, LF/HF) from RR intervals via
+Pan–Tompkins. Emit one row per subject with those columns and feed it in.
+
+---
+
+## Extending the balance pathway
+For the COP side, swap `build_cohort()` for a loader of real force-plate
+recordings, keep `extract_cop_features()` unchanged, and re-run
 `python -m neuroscreen.train`. The dashboard consumes whatever `model.js` the
 pipeline exports.
 
-> **Disclaimer.** Research / educational prototype trained on synthetic data.
-> Not a medical device and not for clinical use.
+> **Disclaimer.** Research / educational prototype. The bundled model is trained
+> on synthetic data and is **not a medical device** — it flags people who should
+> receive a proper nerve-conduction / autonomic workup; it does not diagnose.
+> Real clinical use requires training on real labelled data, independent-cohort
+> validation, ethics approval, and regulatory clearance.
