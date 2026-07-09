@@ -39,3 +39,6 @@ docs/**/*.pdf
 *.zip
 Thumbs.db
 desktop.ini
+
+# presentation deck kept local-only, not in the public repo
+docs/zeroth-review/
