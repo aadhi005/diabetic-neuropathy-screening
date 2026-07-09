@@ -7,3 +7,6 @@ venv/
 # regenerable artifacts / scratch
 models/*.joblib
 data/new_patients.csv
+
+# local Claude Code settings
+.claude/settings.local.json
