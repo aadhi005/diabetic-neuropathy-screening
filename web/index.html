@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>NeuroScreen — Diabetic Neuropathy Screening</title>
+<style>
+  :root{
+    --bg:#0b1020; --panel:#141b32; --panel2:#1b2440; --line:#26304f;
+    --txt:#e7ecf7; --mut:#93a0c0; --acc:#4f7cff; --acc2:#22d3ac;
+    --nn:#22c55e; --an:#f5b942; --sn:#ef4444; --can:#a855f7;
+    --shadow:0 10px 30px rgba(0,0,0,.35);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:radial-gradient(1200px 600px at 20% -10%,#16224a 0,var(--bg) 55%);
+    color:var(--txt);font:14px/1.5 "Segoe UI",Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+  a{color:var(--acc)}
+  .wrap{max-width:1280px;margin:0 auto;padding:22px 20px 60px}
+  header{display:flex;align-items:flex-start;gap:16px;flex-wrap:wrap;margin-bottom:18px}
+  .logo{width:46px;height:46px;border-radius:12px;flex:0 0 auto;
+    background:linear-gradient(135deg,var(--acc),var(--acc2));display:grid;place-items:center;
+    font-weight:800;font-size:20px;color:#06122a;box-shadow:var(--shadow)}
+  h1{font-size:22px;margin:0;letter-spacing:.2px}
+  .sub{color:var(--mut);font-size:13px;margin-top:2px;max-width:720px}
+  .tag{display:inline-block;margin-top:8px;font-size:11.5px;color:#bcd0ff;background:#1b2853;
+    border:1px solid #2b3c72;border-radius:999px;padding:3px 10px}
+  .grid{display:grid;grid-template-columns:340px 1fr;gap:18px;align-items:start}
+  @media (max-width:980px){.grid{grid-template-columns:1fr}}
+  .card{background:linear-gradient(180deg,var(--panel),#111834);border:1px solid var(--line);
+    border-radius:16px;padding:18px;box-shadow:var(--shadow)}
+  .card h2{font-size:13px;text-transform:uppercase;letter-spacing:.14em;color:var(--mut);margin:0 0 14px}
+  .card h2 .hint{float:right;text-transform:none;letter-spacing:0;font-size:11px;color:#6f7fa6}
+  /* controls */
+  .examples{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px}
+  .ex{border:1px solid var(--line);background:var(--panel2);color:var(--txt);border-radius:10px;
+    padding:9px 10px;cursor:pointer;font-size:12.5px;text-align:left;transition:.15s;display:flex;
+    align-items:center;gap:8px}
+  .ex:hover{border-color:var(--acc);transform:translateY(-1px)}
+  .dot{width:9px;height:9px;border-radius:50%;flex:0 0 auto}
+  .slider{margin:15px 0}
+  .slider label{display:flex;justify-content:space-between;font-size:12.5px;color:var(--mut);margin-bottom:6px}
+  .slider label b{color:var(--txt);font-variant-numeric:tabular-nums}
+  input[type=range]{width:100%;-webkit-appearance:none;height:6px;border-radius:4px;background:#26304f;outline:none}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:17px;height:17px;border-radius:50%;
+    background:var(--acc);cursor:pointer;border:3px solid #0b1020;box-shadow:0 0 0 1px var(--acc)}
+  .mode{font-size:11.5px;color:#6f7fa6;margin-top:4px}
+  .reset{margin-top:12px;width:100%;padding:9px;border-radius:10px;border:1px solid var(--line);
+    background:transparent;color:var(--mut);cursor:pointer}
+  .reset:hover{color:var(--txt);border-color:var(--acc)}
+  /* result */
+  .verdict{display:flex;gap:18px;align-items:center;flex-wrap:wrap}
+  .gauge{position:relative;width:132px;height:132px;flex:0 0 auto}
+  .gauge .pct{position:absolute;inset:0;display:grid;place-items:center;text-align:center}
+  .gauge .pct b{font-size:26px}.gauge .pct span{display:block;font-size:10.5px;color:var(--mut);text-transform:uppercase;letter-spacing:.1em}
+  .vmeta{flex:1;min-width:200px}
+  .vlabel{font-size:20px;font-weight:700;margin:0 0 2px}
+  .vname{color:var(--mut);font-size:13px}
+  .risk{display:inline-block;margin-top:10px;padding:5px 12px;border-radius:999px;font-weight:700;font-size:12.5px}
+  .bars{margin-top:16px;display:flex;flex-direction:column;gap:9px}
+  .bar{display:grid;grid-template-columns:132px 1fr 46px;gap:10px;align-items:center;font-size:12.5px}
+  .bar .track{height:9px;border-radius:5px;background:#20294700;position:relative;overflow:hidden;
+    background:#1c2544}
+  .bar .fill{height:100%;border-radius:5px;transition:width .4s ease}
+  .bar .val{text-align:right;color:var(--mut);font-variant-numeric:tabular-nums}
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  @media (max-width:760px){.cols{grid-template-columns:1fr}}
+  canvas{width:100%;height:auto;display:block;background:#0c1226;border-radius:12px;border:1px solid var(--line)}
+  .cap{font-size:11.5px;color:#6f7fa6;margin-top:8px;text-align:center}
+  /* explain */
+  .feat{display:grid;grid-template-columns:120px 1fr;gap:10px;align-items:center;margin:7px 0;font-size:12px}
+  .feat .fb{height:18px;background:#1c2544;border-radius:5px;position:relative}
+  .feat .fb::before{content:'';position:absolute;top:0;bottom:0;left:50%;width:1px;background:#39456e}
+  .feat .seg{position:absolute;top:2px;bottom:2px;border-radius:4px}
+  .feat .nm{color:var(--mut);text-align:right;font-variant-numeric:tabular-nums}
+  .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:11.5px;color:var(--mut);margin-top:10px}
+  /* metrics */
+  .tabs{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+  .tab{padding:7px 12px;border-radius:9px;border:1px solid var(--line);background:var(--panel2);
+    color:var(--mut);cursor:pointer;font-size:12px}
+  .tab.on{color:#06122a;background:linear-gradient(135deg,var(--acc),var(--acc2));border-color:transparent;font-weight:700}
+  table{width:100%;border-collapse:collapse;font-size:12.5px}
+  th,td{padding:7px 8px;text-align:right;border-bottom:1px solid var(--line)}
+  th:first-child,td:first-child{text-align:left}
+  th{color:var(--mut);font-weight:600}
+  .acc-big{font-size:30px;font-weight:800}
+  .cm{display:inline-grid;gap:3px;margin-top:6px}
+  .cm .cell{width:38px;height:34px;display:grid;place-items:center;border-radius:6px;font-size:12px;font-weight:600}
+  .cm .hd{background:transparent;color:var(--mut);font-weight:600;font-size:11px}
+  footer{margin-top:26px;color:#6f7fa6;font-size:11.5px;line-height:1.7}
+  .pill{display:inline-block;background:#1b2853;border:1px solid #2b3c72;border-radius:6px;padding:1px 7px;color:#bcd0ff;font-size:11px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="logo">NS</div>
+    <div>
+      <h1>NeuroScreen</h1>
+      <div class="sub">A multi-domain, multi-modal computer-aided screening tool for diabetic neuropathy.
+        It fuses <b>standing-balance center-of-pressure analysis</b> with <b>wearable gait, plantar-pressure and
+        heart-rate-variability markers</b> to stage peripheral neuropathy and detect cardiac autonomic involvement.</div>
+      <span class="tag">Novel synthesis of Mengarelli et al. 2024 (posture) + Talha et al. 2026 (multimodal wearable)</span>
+    </div>
+  </header>
+
+  <div class="grid">
+    <!-- ============ LEFT: CONTROLS ============ -->
+    <div>
+      <div class="card">
+        <h2>Virtual patient <span class="hint">load a case</span></h2>
+        <div class="examples" id="examples"></div>
+
+        <div class="slider">
+          <label>Postural instability <b id="v0">20</b></label>
+          <input type="range" id="s0" min="0" max="100" value="20"/>
+        </div>
+        <div class="slider">
+          <label>Gait impairment <b id="v1">20</b></label>
+          <input type="range" id="s1" min="0" max="100" value="20"/>
+        </div>
+        <div class="slider">
+          <label>Plantar-pressure loading <b id="v2">20</b></label>
+          <input type="range" id="s2" min="0" max="100" value="20"/>
+        </div>
+        <div class="slider">
+          <label>Autonomic / HRV loss <b id="v3">15</b></label>
+          <input type="range" id="s3" min="0" max="100" value="15"/>
+        </div>
+        <div class="mode" id="mode">Custom patient — adjust the dials to simulate a presentation.</div>
+        <button class="reset" id="reset">Reset dials</button>
+      </div>
+
+      <div class="card" style="margin-top:16px">
+        <h2>How it screens</h2>
+        <div style="font-size:12.5px;color:var(--mut)">
+          Each dial drives a physiological modality. A distance-weighted
+          <b>k-nearest-neighbour</b> vote over a synthetic reference cohort of
+          <b id="nref">—</b> subjects (117 with 78 features each) returns the class
+          probabilities on the right. Balance features screen peripheral severity;
+          HRV features expose autonomic neuropathy that posture alone misses.
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ RIGHT: RESULTS ============ -->
+    <div>
+      <div class="card">
+        <h2>Screening result</h2>
+        <div class="verdict">
+          <div class="gauge">
+            <canvas id="gauge" width="264" height="264"></canvas>
+            <div class="pct"><div><b id="conf">—</b><span>confidence</span></div></div>
+          </div>
+          <div class="vmeta">
+            <p class="vlabel" id="pred">—</p>
+            <div class="vname" id="predname">Adjust a dial or load a case to begin.</div>
+            <span class="risk" id="risk">—</span>
+            <div class="bars" id="probbars"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="cols" style="margin-top:18px">
+        <div class="card">
+          <h2>Standing-balance sway <span class="hint">statokinesigram</span></h2>
+          <canvas id="stk" width="520" height="360"></canvas>
+          <div class="cap">Center-of-pressure planar trajectory during quiet standing (eyes closed).</div>
+        </div>
+        <div class="card">
+          <h2>Why this decision <span class="hint">feature attribution</span></h2>
+          <div id="explain"></div>
+          <div class="legend">
+            <span>◀ toward healthy</span><span style="margin-left:auto">toward neuropathy ▶</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:18px">
+        <h2>Validated model performance <span class="hint">leave-one-subject-out</span></h2>
+        <div class="tabs" id="tabs"></div>
+        <div class="cols">
+          <div>
+            <div class="acc-big" id="mAcc">—</div>
+            <div style="color:var(--mut);font-size:12.5px" id="mName">—</div>
+            <table style="margin-top:12px"><thead>
+              <tr><th>Class</th><th>Prec.</th><th>Sens.</th><th>Spec.</th><th>n</th></tr>
+            </thead><tbody id="mTable"></tbody></table>
+          </div>
+          <div>
+            <div style="color:var(--mut);font-size:12px;margin-bottom:6px">Confusion matrix (rows = true)</div>
+            <div class="cm" id="cm"></div>
+          </div>
+        </div>
+      </div>
+
+      <footer>
+        <b>Sources.</b>
+        Mengarelli A. et&nbsp;al., “A Computer-Aided Screening Solution for the Identification of Diabetic Neuropathy
+        From Standing Balance by Leveraging Multi-Domain Features,” <i>IEEE TNSRE</i>, 2024. &nbsp;·&nbsp;
+        Talha M., Kyrarini M., Ali E., “Physiological Features for Classification of Different Types of Peripheral
+        Neuropathy Using Multimodal Wearable Sensors,” <i>IEEE Access</i>, 2026.<br>
+        <b>Classes.</b>
+        <span class="pill">NN</span> non-neuropathic ·
+        <span class="pill">AN</span> asymptomatic PN ·
+        <span class="pill">SN</span> symptomatic PN ·
+        <span class="pill">CAN</span> cardiac autonomic neuropathy.<br>
+        Research / educational prototype trained on physiologically-grounded <b>synthetic</b> data — not a medical device.
+      </footer>
+    </div>
+  </div>
+</div>
+
+<script src="model.js"></script>
+<script>
+const M = window.MODEL;
+const CLASS_COLOR = {NN:'#22c55e',AN:'#f5b942',SN:'#ef4444',CAN:'#a855f7'};
+const RISK = {
+  NN:{t:'Low risk',c:'#0f2b18',fg:'#4ade80'},
+  AN:{t:'Early neuropathy — monitor',c:'#332608',fg:'#fbbf24'},
+  SN:{t:'High risk — refer',c:'#3a1111',fg:'#f87171'},
+  CAN:{t:'Autonomic involvement — refer',c:'#2a1240',fg:'#c084fc'}
+};
+
+/* ---------- feature-vector synthesis from the 4 dials ---------- */
+function groupOf(name){
+  if(name.startsWith('APc_')||name.startsWith('MLc_')||name.startsWith('STKc_')) return 0; // posture
+  if(name.startsWith('gait_')) return 1;
+  if(name.startsWith('press_')) return 2;
+  if(name.startsWith('hrv_')) return 3;
+  return 0;
+}
+const TARGET = ['SN','SN','SN','CAN'];   // where each dial pushes each modality
+function synth(dials){
+  const cm = M.class_means;
+  return M.feature_names.map(n=>{
+    const g = groupOf(n), t = dials[g]/100;
+    const a = cm[n]['NN'], b = cm[n][TARGET[g]];
+    return a + (b-a)*t;
+  });
+}
+
+/* ---------- distance-weighted kNN over the reference cohort ---------- */
+function classify(vec){
+  const {mean,std} = M.scaler;
+  const z = vec.map((v,i)=>(v-mean[i])/std[i]);
+  const X = M.reference.X, y = M.reference.y, k = M.knn_k;
+  const d = X.map((row,i)=>{
+    let s=0; for(let j=0;j<row.length;j++){const df=row[j]-z[j]; s+=df*df;}
+    return {d:Math.sqrt(s), y:y[i]};
+  }).sort((a,b)=>a.d-b.d).slice(0,k);
+  const w={}; M.classes.forEach(c=>w[c]=0);
+  d.forEach(o=>{ w[o.y]+=1/(o.d+1e-6); });
+  const tot=Object.values(w).reduce((a,b)=>a+b,0)||1;
+  const prob={}; M.classes.forEach(c=>prob[c]=w[c]/tot);
+  const pred=Object.keys(prob).reduce((a,b)=>prob[a]>=prob[b]?a:b);
+  return {pred,prob};
+}
+
+/* ---------- feature attribution (SHAP-style, importance-weighted z) ---------- */
+function attribution(vec,pred){
+  const cm=M.class_means, imp={}; M.importances.forEach(o=>imp[o.feature]=o.importance);
+  // reference = overall mean of NN (healthy baseline)
+  const rows = M.feature_names.map((n,i)=>{
+    const nn=cm[n]['NN'], sd=Math.abs(M.scaler.std[i])||1;
+    const dir=(vec[i]-nn)/sd;                 // >0 = away from healthy
+    return {name:n, score:dir*(imp[n]||0.001), group:groupOf(n)};
+  });
+  rows.sort((a,b)=>Math.abs(b.score)-Math.abs(a.score));
+  return rows.slice(0,7);
+}
+
+/* ---------- rendering ---------- */
+function drawGauge(prob,pred){
+  const c=document.getElementById('gauge'), x=c.getContext('2d'), R=132;
+  x.clearRect(0,0,264,264); x.lineWidth=20;
+  x.beginPath();x.arc(R,R,110,0,2*Math.PI);x.strokeStyle='#1c2544';x.stroke();
+  const p=prob[pred];
+  x.beginPath();x.arc(R,R,110,-Math.PI/2,-Math.PI/2+2*Math.PI*p);
+  x.strokeStyle=CLASS_COLOR[pred];x.lineCap='round';x.stroke();
+}
+function probBars(prob){
+  const el=document.getElementById('probbars'); el.innerHTML='';
+  M.classes.slice().sort((a,b)=>prob[b]-prob[a]).forEach(c=>{
+    const pct=(prob[c]*100);
+    el.insertAdjacentHTML('beforeend',
+      `<div class="bar"><span>${c} · ${M.class_names[c].split('(')[0].trim()}</span>
+       <span class="track"><span class="fill" style="width:${pct}%;background:${CLASS_COLOR[c]}"></span></span>
+       <span class="val">${pct.toFixed(0)}%</span></div>`);
+  });
+}
+function drawSTK(instab){
+  const c=document.getElementById('stk'), x=c.getContext('2d'), W=520,H=360;
+  x.clearRect(0,0,W,H);
+  x.strokeStyle='#1b2544';x.lineWidth=1;
+  for(let i=1;i<8;i++){x.beginPath();x.moveTo(W/8*i,0);x.lineTo(W/8*i,H);x.stroke();
+    x.beginPath();x.moveTo(0,H/8*i);x.lineTo(W,H/8*i);x.stroke();}
+  x.strokeStyle='#2a3a66';x.beginPath();x.moveTo(W/2,0);x.lineTo(W/2,H);x.moveTo(0,H/2);x.lineTo(W,H/2);x.stroke();
+  // Ornstein-Uhlenbeck COP path; amplitude & wander scale with instability.
+  const amp=6+instab*0.22, theta=0.9-instab*0.006, sig=amp*(0.32+instab*0.002);
+  let ax=0,ay=0,dxx=0,dyy=0; const pts=[];
+  for(let i=0;i<900;i++){
+    dxx+= (Math.random()-.5)*0.5; dyy+=(Math.random()-.5)*0.5;
+    ax += theta*(dxx*0.12-ax)*0.05 + sig*0.05*(Math.random()-.5)*2;
+    ay += theta*(dyy*0.12-ay)*0.05 + sig*0.05*(Math.random()-.5)*2*0.8;
+    pts.push([W/2+ax*3.2, H/2+ay*3.2]);
+  }
+  x.lineWidth=1.4;
+  for(let i=1;i<pts.length;i++){
+    const t=i/pts.length;
+    x.strokeStyle=`rgba(79,124,255,${0.15+t*0.6})`;
+    x.beginPath();x.moveTo(pts[i-1][0],pts[i-1][1]);x.lineTo(pts[i][0],pts[i][1]);x.stroke();
+  }
+  // 95% ellipse
+  const xs=pts.map(p=>p[0]),ys=pts.map(p=>p[1]);
+  const mx=xs.reduce((a,b)=>a+b)/xs.length,my=ys.reduce((a,b)=>a+b)/ys.length;
+  const sx=Math.sqrt(xs.reduce((a,b)=>a+(b-mx)**2,0)/xs.length);
+  const sy=Math.sqrt(ys.reduce((a,b)=>a+(b-my)**2,0)/ys.length);
+  x.strokeStyle='#ef4444';x.lineWidth=1.6;x.beginPath();
+  x.ellipse(mx,my,sx*2.2,sy*2.2,0,0,2*Math.PI);x.stroke();
+}
+function explain(rows){
+  const el=document.getElementById('explain'); el.innerHTML='';
+  const gname=['balance','gait','pressure','HRV'];
+  const max=Math.max(...rows.map(r=>Math.abs(r.score)),1e-6);
+  rows.forEach(r=>{
+    const w=Math.abs(r.score)/max*50, pos=r.score>=0;
+    const col=pos?'#f87171':'#4ade80';
+    const seg=pos?`left:50%;width:${w}%;background:${col}`:`right:50%;width:${w}%;background:${col}`;
+    el.insertAdjacentHTML('beforeend',
+      `<div class="feat"><span class="nm">${r.name}</span>
+        <div class="fb"><span class="seg" style="${seg}"></span></div></div>`);
+  });
+}
+
+/* ---------- metrics panel ---------- */
+let curTab;
+function renderMetrics(key){
+  curTab=key; const m=M.metrics[key], labels=m.labels;
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('on',t.dataset.k===key));
+  document.getElementById('mAcc').textContent=(m.accuracy*100).toFixed(1)+'%';
+  document.getElementById('mName').textContent=m.name;
+  const tb=document.getElementById('mTable'); tb.innerHTML='';
+  labels.forEach(c=>{const r=m.per_class[c];
+    tb.insertAdjacentHTML('beforeend',
+      `<tr><td><span class="dot" style="display:inline-block;background:${CLASS_COLOR[c]}"></span> ${c}</td>
+       <td>${(r.precision*100).toFixed(0)}</td><td>${(r.sensitivity*100).toFixed(0)}</td>
+       <td>${(r.specificity*100).toFixed(0)}</td><td>${r.support}</td></tr>`);
+  });
+  const cm=document.getElementById('cm'); const n=labels.length;
+  cm.style.gridTemplateColumns=`46px repeat(${n},38px)`;
+  const mx=Math.max(...m.confusion.flat(),1); cm.innerHTML='<div class="cell hd"></div>';
+  labels.forEach(c=>cm.insertAdjacentHTML('beforeend',`<div class="cell hd">${c}</div>`));
+  m.confusion.forEach((row,i)=>{
+    cm.insertAdjacentHTML('beforeend',`<div class="cell hd">${labels[i]}</div>`);
+    row.forEach((v,j)=>{
+      const a=v/mx, diag=i===j;
+      const bg=diag?`rgba(34,211,172,${0.15+a*0.7})`:`rgba(239,68,68,${a*0.6})`;
+      cm.insertAdjacentHTML('beforeend',`<div class="cell" style="background:${v?bg:'#141b32'};color:${v?'#fff':'#4a5680'}">${v}</div>`);
+    });
+  });
+}
+
+/* ---------- main update ---------- */
+let exampleMode=null;
+function update(vec,truth){
+  const {pred,prob}=classify(vec);
+  document.getElementById('pred').textContent=pred+' — '+M.class_names[pred].split('(')[0].trim();
+  document.getElementById('pred').style.color=CLASS_COLOR[pred];
+  document.getElementById('predname').textContent=
+    truth?`Loaded case labelled ${truth} · model predicts ${pred}`:M.class_names[pred];
+  document.getElementById('conf').textContent=(prob[pred]*100).toFixed(0)+'%';
+  const rk=RISK[pred]; const rEl=document.getElementById('risk');
+  rEl.textContent=rk.t; rEl.style.background=rk.c; rEl.style.color=rk.fg;
+  drawGauge(prob,pred); probBars(prob);
+  explain(attribution(vec,pred));
+}
+function fromDials(){
+  exampleMode=null;
+  document.getElementById('mode').textContent='Custom patient — adjust the dials to simulate a presentation.';
+  const dials=[0,1,2,3].map(i=>+document.getElementById('s'+i).value);
+  dials.forEach((v,i)=>document.getElementById('v'+i).textContent=v);
+  drawSTK(dials[0]);
+  update(synth(dials),null);
+}
+
+/* ---------- wire up ---------- */
+function initExamples(){
+  const el=document.getElementById('examples');
+  M.examples.forEach((ex,i)=>{
+    el.insertAdjacentHTML('beforeend',
+      `<button class="ex" data-i="${i}"><span class="dot" style="background:${CLASS_COLOR[ex.label]}"></span>
+       ${ex.label} case</button>`);
+  });
+  el.querySelectorAll('.ex').forEach(b=>b.onclick=()=>{
+    const ex=M.examples[+b.dataset.i];
+    exampleMode=ex.label;
+    document.getElementById('mode').textContent=`Real synthetic subject loaded (ground truth: ${ex.label}).`;
+    const vec=M.feature_names.map(n=>ex.features[n]);
+    // reflect approximate dial positions
+    const g=[['APc_DS'],['gait_cadence'],['press_forefoot_peak'],['hrv_rmssd']];
+    drawSTK(ex.label==='SN'?85:ex.label==='AN'?45:ex.label==='CAN'?35:18);
+    update(vec,ex.label);
+  });
+}
+function initTabs(){
+  const el=document.getElementById('tabs');
+  Object.keys(M.metrics).forEach(k=>{
+    const short={posture:'Posture pathway (Paper 1)',ensemble:'Posture · all classes',gb:'Multi-modal fusion (novel)'};
+    el.insertAdjacentHTML('beforeend',`<div class="tab" data-k="${k}">${short[k]||k}</div>`);
+  });
+  el.querySelectorAll('.tab').forEach(t=>t.onclick=()=>renderMetrics(t.dataset.k));
+}
+document.getElementById('nref').textContent=M.reference.y.length;
+[0,1,2,3].forEach(i=>document.getElementById('s'+i).addEventListener('input',fromDials));
+document.getElementById('reset').onclick=()=>{
+  [['s0',20],['s1',20],['s2',20],['s3',15]].forEach(([id,v])=>document.getElementById(id).value=v);
+  fromDials();
+};
+initExamples(); initTabs(); renderMetrics('gb'); fromDials();
+</script>
+</body>
+</html>
