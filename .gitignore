@@ -9,6 +9,10 @@ models/*.joblib
 data/new_patients.csv
 data/real_test_subjects.csv
 
+# patient database -- local state containing real names/health data, never commit
+data/*.db
+data/*.db-journal
+
 # local Claude Code settings
 .claude/settings.local.json
 

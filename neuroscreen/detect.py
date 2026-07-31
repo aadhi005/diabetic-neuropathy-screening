@@ -5,12 +5,20 @@ Takes a CSV of one or more subjects' wearable features (gait + plantar pressure
 + HRV, as captured by IMUs, a pressure insole and an ECG/HRV strap), aligns the
 columns to the trained model's schema, and prints a screening report with the
 predicted class, confidence, a clinical risk level, the markers that most drove
-the decision, and a recommendation.
+the decision, and a recommendation. Each screening is saved to a local SQLite
+database (see ``neuroscreen.db``) so a patient's results accumulate over time.
 
 Usage:
     python -m neuroscreen.detect --template subject_template.csv   # make a blank input
     python -m neuroscreen.detect --input subject.csv               # screen subject(s)
     python -m neuroscreen.detect --input subject.csv --json        # machine-readable
+    python -m neuroscreen.detect --input subject.csv --no-save     # don't persist
+    python -m neuroscreen.detect --list-patients                   # everyone on file
+    python -m neuroscreen.detect --history P001                    # one patient's past results
+
+An input CSV may optionally include identity columns -- ``patient_id`` (or
+``id``/``subject``/``subject_id``), ``name``, ``age``, ``sex`` -- alongside the
+feature columns; these are stored with the result but never used as features.
 """
 
 from __future__ import annotations
@@ -25,6 +33,7 @@ import numpy as np
 import pandas as pd
 
 from . import dataset as ds
+from . import db as ndb
 from .realtrain import ARTIFACT
 
 RISK = {
@@ -51,6 +60,42 @@ def load_model():
 
 def _norm(s):
     return re.sub(r"[^a-z0-9]", "", str(s).lower())
+
+
+_ID_COLS = {"id", "patientid", "subject", "subjectid"}
+_NAME_COLS = {"name", "patientname", "subjectname"}
+_AGE_COLS = {"age"}
+_SEX_COLS = {"sex", "gender"}
+
+
+def _find_col(columns, wanted):
+    for c in columns:
+        if _norm(c) in wanted:
+            return c
+    return None
+
+
+def extract_patient_meta(df: pd.DataFrame):
+    """Pull identity columns (patient_id/name/age/sex) out of an input CSV, if
+    present. These are stored alongside a screening but never treated as
+    model features."""
+    id_col = _find_col(df.columns, _ID_COLS)
+    name_col = _find_col(df.columns, _NAME_COLS)
+    age_col = _find_col(df.columns, _AGE_COLS)
+    sex_col = _find_col(df.columns, _SEX_COLS)
+    meta = []
+    for i in range(len(df)):
+        pid = str(df[id_col].iloc[i]) if id_col else f"row{i+1}"
+        name = str(df[name_col].iloc[i]) if name_col and pd.notna(df[name_col].iloc[i]) else None
+        age = None
+        if age_col and pd.notna(df[age_col].iloc[i]):
+            try:
+                age = float(df[age_col].iloc[i])
+            except (TypeError, ValueError):
+                age = None
+        sex = str(df[sex_col].iloc[i]) if sex_col and pd.notna(df[sex_col].iloc[i]) else None
+        meta.append({"patient_id": pid, "name": name, "age": age, "sex": sex})
+    return meta, {"id_col": id_col, "name_col": name_col, "age_col": age_col, "sex_col": sex_col}
 
 
 def build_matrix(df: pd.DataFrame, model):
@@ -144,40 +189,105 @@ def _print_report(subj_id, res, imputed):
     print(bar)
 
 
+def write_template(path: str):
+    """Write a blank input CSV: identity columns + whatever features the
+    currently-trained model actually expects (falls back to the generic
+    wearable schema if no model has been trained yet)."""
+    id_cols = ["patient_id", "name", "age", "sex"]
+    if os.path.exists(ARTIFACT):
+        names = joblib.load(ARTIFACT)["feature_names"]
+    else:
+        names = ds.CANONICAL
+    cols = id_cols + list(names)
+    row = {**{k: "" for k in id_cols}, **{k: "" for k in names}}
+    pd.DataFrame([row], columns=cols).to_csv(path, index=False)
+
+
+def _print_patients(rows):
+    if not rows:
+        print("No patients on file yet. Screen someone with --input to add one.")
+        return
+    print(f"\n{len(rows)} patient(s) on file:")
+    print(f"  {'PATIENT ID':<16}{'NAME':<20}{'AGE':<6}{'SEX':<6}{'SCREENINGS':<12}{'LAST RESULT':<14}LAST SCREENED")
+    for r in rows:
+        print(f"  {r['patient_id']:<16}{(r['name'] or '-'):<20}"
+              f"{(str(r['age']) if r['age'] is not None else '-'):<6}"
+              f"{(r['sex'] or '-'):<6}{r['n_screenings']:<12}"
+              f"{(r['last_prediction'] or '-'):<14}{r['last_screened'] or '-'}")
+
+
+def _print_history(patient_id, rows):
+    if not rows:
+        print(f"No screenings on file for patient '{patient_id}'.")
+        return
+    print(f"\nHistory for patient '{patient_id}' ({len(rows)} screening(s)), most recent first:")
+    for r in rows:
+        probs = json.loads(r["probabilities"])
+        top = ", ".join(f"{k} {v*100:.0f}%" for k, v in probs.items())
+        print(f"  {r['timestamp']}  ->  {r['prediction']:<10} "
+              f"({r['confidence']*100:.0f}% conf, {r['risk_level']} risk)   [{top}]")
+
+
 def main():
     ap = argparse.ArgumentParser(description="Screen a real person for neuropathy.")
     ap.add_argument("--input", help="CSV of subject wearable features")
     ap.add_argument("--template", metavar="PATH",
                     help="write a blank input template CSV and exit")
     ap.add_argument("--json", action="store_true", help="emit JSON instead of a report")
+    ap.add_argument("--db", default=ndb.DEFAULT_PATH,
+                    help=f"path to the SQLite results database (default: {ndb.DEFAULT_PATH})")
+    ap.add_argument("--no-save", action="store_true", help="don't persist results to the database")
+    ap.add_argument("--list-patients", action="store_true", help="list every patient on file, then exit")
+    ap.add_argument("--history", metavar="PATIENT_ID",
+                    help="print a patient's past screenings, then exit")
     args = ap.parse_args()
 
     if args.template:
-        ds.write_template(args.template)
+        write_template(args.template)
         print(f"Wrote input template -> {args.template}")
-        print("Fill one row per subject with the captured feature values, then run:")
+        print("Fill one row per subject (patient_id/name/age/sex are optional but "
+              "recommended for tracking), then run:")
         print(f"  python -m neuroscreen.detect --input {args.template}")
         return
 
+    if args.list_patients:
+        conn = ndb.connect(args.db)
+        _print_patients(ndb.list_patients(conn))
+        return
+
+    if args.history:
+        conn = ndb.connect(args.db)
+        _print_history(args.history, ndb.patient_history(conn, args.history))
+        return
+
     if not args.input:
-        ap.error("provide --input <csv> or --template <csv>")
+        ap.error("provide --input <csv>, --template <csv>, --list-patients, or --history <id>")
 
     model = load_model()
     df = pd.read_csv(args.input)
-    id_col = next((c for c in df.columns if c.lower() in ("id", "subject", "subject_id")), None)
+    meta, meta_cols = extract_patient_meta(df)
     X, used, imputed = build_matrix(df, model)
+
+    conn = None if args.no_save else ndb.connect(args.db)
 
     results = []
     for i in range(len(df)):
         res = screen_one(X[i], model)
-        sid = str(df[id_col].iloc[i]) if id_col else f"row{i+1}"
+        sid = meta[i]["patient_id"]
         results.append({"id": sid, **res})
+        if conn is not None:
+            ndb.upsert_patient(conn, sid, meta[i]["name"], meta[i]["age"], meta[i]["sex"])
+            ndb.save_screening(conn, sid, model["source"], res, used, imputed)
         if not args.json:
             _print_report(sid, res, imputed)
+            if conn is not None:
+                n = len(ndb.patient_history(conn, sid))
+                print(f"  Saved to {args.db}  ({n} screening(s) on file for {sid})")
 
     if args.json:
         print(json.dumps({"model_source": model["source"],
                           "features_used": used, "features_imputed": imputed,
+                          "saved_to_db": (args.db if conn is not None else None),
                           "results": results}, indent=2))
     elif model["source"] == "synthetic":
         print("\n[!] Model trained on SYNTHETIC data -- results are a demonstration, "

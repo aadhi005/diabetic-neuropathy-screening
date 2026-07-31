@@ -149,13 +149,34 @@ synthetic frame, clearly flagged.
 
 ### Step 3 — screen a subject
 ```bash
-python -m neuroscreen.detect --input data/real_test_subjects.csv        # report
-python -m neuroscreen.detect --input data/real_test_subjects.csv --json # machine
+python -m neuroscreen.detect --template data/subject.csv   # blank input, model-matched columns
+python -m neuroscreen.detect --input data/subject.csv      # report
+python -m neuroscreen.detect --input data/subject.csv --json
 ```
 Output per subject: predicted class, confidence, clinical risk level, the
 markers that most drove the decision (deviation from the control reference
 weighted by model importance), and a recommendation. The detector matches your
 CSV's columns to the model's features by name and imputes anything missing.
+
+### Patient database
+Every screening is written to a local **SQLite** database
+(`data/neuroscreen.db`, override with `--db`), so results accumulate per
+patient instead of being a one-off printout. The input CSV may carry optional
+identity columns — `patient_id`, `name`, `age`, `sex` — which are stored with
+the result but never used as model features.
+
+```bash
+python -m neuroscreen.detect --input data/subject.csv --no-save  # screen without storing
+python -m neuroscreen.detect --list-patients                     # everyone on file
+python -m neuroscreen.detect --history P001                      # one patient over time
+```
+
+Two tables (`neuroscreen/db.py`): `patients` holds identity, `screenings` holds
+one row per run (timestamp, model source, prediction, confidence, risk,
+probabilities, top factors, which features were measured vs imputed).
+
+> The `.db` file is **git-ignored** — it can hold real names and health data and
+> must never be committed to a public repository.
 
 ### Swapping in a different dataset
 `neuroscreen/realdata.py` holds the loader + curated feature list; add a loader
