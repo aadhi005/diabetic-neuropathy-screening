@@ -88,19 +88,87 @@
   .cm .hd{background:transparent;color:var(--mut);font-weight:600;font-size:11px}
   footer{margin-top:26px;color:#6f7fa6;font-size:11.5px;line-height:1.7}
   .pill{display:inline-block;background:#1b2853;border:1px solid #2b3c72;border-radius:6px;padding:1px 7px;color:#bcd0ff;font-size:11px}
+  /* ===== patient profile ===== */
+  .headtext{flex:1;min-width:0}
+  .profile-btn{position:relative;flex:0 0 auto;width:46px;height:46px;padding:0;border-radius:50%;
+    background:var(--panel2);color:#bcd0ff;border:1px solid var(--line);cursor:pointer;
+    display:flex;align-items:center;justify-content:center;transition:.2s}
+  .profile-btn:hover{border-color:var(--acc);color:#fff;transform:translateY(-2px)}
+  .profile-badge{position:absolute;top:-4px;right:-4px;min-width:19px;height:19px;padding:0 5px;
+    border-radius:999px;background:var(--sn);color:#fff;font-size:11px;font-weight:700;
+    line-height:19px;text-align:center}
+  .modal-overlay{position:fixed;inset:0;z-index:100;background:rgba(4,8,20,.7);
+    display:flex;align-items:flex-start;justify-content:center;padding:40px 20px;overflow-y:auto}
+  .modal-overlay[hidden]{display:none}
+  .modal{background:linear-gradient(180deg,var(--panel),#111834);border:1px solid var(--line);
+    border-radius:18px;width:100%;max-width:620px;box-shadow:0 25px 60px rgba(0,0,0,.55)}
+  .modal-head{display:flex;align-items:center;gap:14px;padding:20px 22px 15px;
+    border-bottom:1px solid var(--line)}
+  .modal-avatar{width:42px;height:42px;border-radius:12px;flex:0 0 auto;color:#06122a;
+    background:linear-gradient(135deg,var(--acc),var(--acc2));
+    display:flex;align-items:center;justify-content:center}
+  .modal-head h2{font-size:16px;margin:0;text-transform:none;letter-spacing:0;color:var(--txt)}
+  .modal-sub{font-size:12.5px;color:var(--mut)}
+  .modal-close{margin-left:auto;flex:0 0 auto;width:34px;height:34px;padding:0;border-radius:9px;
+    background:var(--panel2);color:var(--mut);border:1px solid var(--line);
+    font-size:21px;line-height:1;cursor:pointer}
+  .modal-close:hover{color:var(--sn);border-color:var(--sn)}
+  .modal-body{padding:18px 22px 22px;max-height:70vh;overflow-y:auto}
+  .pform{display:grid;grid-template-columns:1fr 1fr;gap:13px}
+  .pfield label{display:block;margin-bottom:5px;font-size:12px;font-weight:600;color:var(--mut)}
+  .pfield input,.pfield select,.pfield textarea{width:100%;padding:9px 11px;border-radius:9px;
+    border:1px solid var(--line);background:#0f1730;color:var(--txt);font:inherit;font-size:13px}
+  .pfield input:focus,.pfield select:focus,.pfield textarea:focus{outline:none;
+    border-color:var(--acc);box-shadow:0 0 0 3px rgba(79,124,255,.2)}
+  .pfield textarea{resize:vertical}
+  .pcheck{display:flex;align-items:center;gap:8px;margin:15px 0 4px;font-size:12.5px;color:var(--mut)}
+  .pcheck input{width:auto}
+  .pbtns{display:flex;gap:9px;margin-top:13px;flex-wrap:wrap}
+  .pbtns button{padding:10px 15px;border-radius:10px;font-weight:600;font-size:13px;cursor:pointer;
+    font-family:inherit;transition:.2s}
+  .psave{flex:1;min-width:140px;border:none;color:#06122a;
+    background:linear-gradient(135deg,var(--acc),var(--acc2))}
+  .psave:hover{transform:translateY(-2px)}
+  .pnew{background:transparent;color:var(--mut);border:1px solid var(--line)}
+  .pnew:hover{color:var(--txt);border-color:var(--acc)}
+  .saved-head{margin-top:24px;padding-top:15px;border-top:1px solid var(--line);
+    font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:var(--mut)}
+  .saved-list{margin-top:10px;display:flex;flex-direction:column;gap:8px}
+  .saved-empty{font-size:12.5px;color:#6f7fa6;padding:6px 0}
+  .prow{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:11px;
+    background:var(--panel2);border:1px solid var(--line)}
+  .pinfo{flex:1;min-width:0}
+  .pn{font-size:13px;font-weight:600}
+  .pmeta{font-size:11.5px;color:var(--mut)}
+  .presult{font-size:12px;font-weight:700;white-space:nowrap}
+  .pact{display:flex;gap:6px;flex:0 0 auto}
+  .pact button{padding:5px 10px;border-radius:8px;font-size:11.5px;font-weight:600;cursor:pointer;
+    background:transparent;color:var(--mut);border:1px solid var(--line);font-family:inherit}
+  .pact .load:hover{color:var(--acc2);border-color:var(--acc2)}
+  .pact .del:hover{color:var(--sn);border-color:var(--sn)}
+  @media (max-width:640px){.pform{grid-template-columns:1fr}.pfield[style]{grid-column:auto !important}}
 </style>
 </head>
 <body>
 <div class="wrap">
   <header>
     <div class="logo">NS</div>
-    <div>
+    <div class="headtext">
       <h1>NeuroScreen</h1>
       <div class="sub">A multi-domain, multi-modal computer-aided screening tool for diabetic neuropathy.
         It fuses <b>standing-balance center-of-pressure analysis</b> with <b>wearable gait, plantar-pressure and
         heart-rate-variability markers</b> to stage peripheral neuropathy and detect cardiac autonomic involvement.</div>
-      <span class="tag">Novel synthesis of Mengarelli et al. 2024 (posture) + Talha et al. 2026 (multimodal wearable)</span>
     </div>
+
+    <!-- ===== PROFILE ICON (opens modal) ===== -->
+    <button class="profile-btn" id="profileBtn" title="Patient profiles" aria-label="Open patient profiles">
+      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor"
+           stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="8" r="4"></circle>
+        <path d="M4 20c0-4 3.5-6 8-6s8 2 8 6"></path>
+      </svg>
+      <span class="profile-badge" id="profileBadge" hidden>0</span>
+    </button>
   </header>
 
   <div class="grid">
@@ -194,11 +262,6 @@
       </div>
 
       <footer>
-        <b>Sources.</b>
-        Mengarelli A. et&nbsp;al., “A Computer-Aided Screening Solution for the Identification of Diabetic Neuropathy
-        From Standing Balance by Leveraging Multi-Domain Features,” <i>IEEE TNSRE</i>, 2024. &nbsp;·&nbsp;
-        Talha M., Kyrarini M., Ali E., “Physiological Features for Classification of Different Types of Peripheral
-        Neuropathy Using Multimodal Wearable Sensors,” <i>IEEE Access</i>, 2026.<br>
         <b>Classes.</b>
         <span class="pill">NN</span> non-neuropathic ·
         <span class="pill">AN</span> asymptomatic PN ·
@@ -210,10 +273,87 @@
   </div>
 </div>
 
+<!-- ================= PATIENT PROFILE MODAL ================= -->
+<div class="modal-overlay" id="profileModal" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal-head">
+      <div class="modal-avatar">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="8" r="4"></circle><path d="M4 20c0-4 3.5-6 8-6s8 2 8 6"></path>
+        </svg>
+      </div>
+      <div>
+        <h2 id="modalTitle">Patient profile</h2>
+        <div class="modal-sub" id="profileHint">Add a new patient record</div>
+      </div>
+      <button class="modal-close" id="modalClose" aria-label="Close">&times;</button>
+    </div>
+
+    <div class="modal-body">
+      <div class="pform">
+        <div class="pfield" style="grid-column:1 / -1">
+          <label for="pName">Full name</label>
+          <input type="text" id="pName" placeholder="e.g. Jane Doe"/>
+        </div>
+        <div class="pfield">
+          <label for="pId">Patient ID</label>
+          <input type="text" id="pId" placeholder="e.g. MBCET-001"/>
+        </div>
+        <div class="pfield">
+          <label for="pAge">Age</label>
+          <input type="number" id="pAge" min="0" max="120" placeholder="years"/>
+        </div>
+        <div class="pfield">
+          <label for="pSex">Sex</label>
+          <select id="pSex">
+            <option value="">&mdash;</option>
+            <option>Female</option>
+            <option>Male</option>
+            <option>Other</option>
+          </select>
+        </div>
+        <div class="pfield">
+          <label for="pType">Diabetes type</label>
+          <select id="pType">
+            <option value="">&mdash;</option>
+            <option>Type 1</option>
+            <option>Type 2</option>
+            <option>Gestational</option>
+            <option>Prediabetes</option>
+          </select>
+        </div>
+        <div class="pfield">
+          <label for="pDuration">Years since diagnosis</label>
+          <input type="number" id="pDuration" min="0" max="80" placeholder="years"/>
+        </div>
+        <div class="pfield">
+          <label for="pHba1c">HbA1c (%)</label>
+          <input type="number" id="pHba1c" min="3" max="20" step="0.1" placeholder="e.g. 7.4"/>
+        </div>
+        <div class="pfield" style="grid-column:1 / -1">
+          <label for="pNotes">Clinical notes</label>
+          <textarea id="pNotes" rows="2" placeholder="symptoms, history, medication&hellip;"></textarea>
+        </div>
+      </div>
+      <label class="pcheck"><input type="checkbox" id="pAttach" checked/> Attach current screening result on save</label>
+      <div class="pbtns">
+        <button class="psave" id="pSave">Save patient</button>
+        <button class="pnew" id="pNew">New / clear</button>
+        <button class="pnew" id="pExport" title="Download all saved patients as CSV">Export CSV</button>
+      </div>
+
+      <div class="saved-head" id="savedHead" style="display:none">Saved patients <span id="savedCount"></span></div>
+      <div class="saved-list" id="savedList"></div>
+    </div>
+  </div>
+</div>
+
 <script src="model.js"></script>
 <script>
 const M = window.MODEL;
 const CLASS_COLOR = {NN:'#22c55e',AN:'#f5b942',SN:'#ef4444',CAN:'#a855f7'};
+window.CLASS_COLOR = CLASS_COLOR;   // consumed by the patient-profile module
 const RISK = {
   NN:{t:'Low risk',c:'#0f2b18',fg:'#4ade80'},
   AN:{t:'Early neuropathy — monitor',c:'#332608',fg:'#fbbf24'},
@@ -373,6 +513,8 @@ function update(vec,truth){
   rEl.textContent=rk.t; rEl.style.background=rk.c; rEl.style.color=rk.fg;
   drawGauge(prob,pred); probBars(prob);
   explain(attribution(vec,pred));
+  // published for the profile module ("attach current screening result on save")
+  window.lastResult={pred, confidence:prob[pred], prob};
 }
 function fromDials(){
   exampleMode=null;
@@ -417,6 +559,124 @@ document.getElementById('reset').onclick=()=>{
   fromDials();
 };
 initExamples(); initTabs(); renderMetrics('gb'); fromDials();
+
+/* =========================================================================
+   Patient profile module — the header icon opens a modal to enter, store,
+   load and delete patient records, persisted in localStorage.
+
+   This is browser-local storage, separate from the project's SQLite database
+   (neuroscreen/db.py). "Export CSV" hands these records to
+   `python -m neuroscreen.detect --input <file>`, which writes them there.
+   ========================================================================= */
+(function () {
+  const STORE_KEY = 'neuroscreen.patients';
+  const F = {
+    name:document.getElementById('pName'), id:document.getElementById('pId'),
+    age:document.getElementById('pAge'), sex:document.getElementById('pSex'),
+    type:document.getElementById('pType'), duration:document.getElementById('pDuration'),
+    hba1c:document.getElementById('pHba1c'), notes:document.getElementById('pNotes'),
+  };
+  const attachBox=document.getElementById('pAttach'), hint=document.getElementById('profileHint'),
+        listEl=document.getElementById('savedList'), headEl=document.getElementById('savedHead'),
+        countEl=document.getElementById('savedCount'), badgeEl=document.getElementById('profileBadge');
+  let editingId=null;
+
+  const load=()=>{try{return JSON.parse(localStorage.getItem(STORE_KEY))||[]}catch(e){return []}};
+  const save=l=>{try{localStorage.setItem(STORE_KEY,JSON.stringify(l))}
+                 catch(e){alert('Could not save — browser storage is unavailable.')}};
+  const uid=()=>'p_'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+  const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+  function readForm(){const o={};for(const k in F)o[k]=F[k].value.trim?F[k].value.trim():F[k].value;return o}
+  function fillForm(p){for(const k in F)F[k].value=p[k]||''}
+  function clearForm(){Object.values(F).forEach(el=>el.value='');editingId=null;
+    hint.textContent='Add a new patient record';}
+
+  function updateBadge(n){if(!badgeEl)return;
+    if(n>0){badgeEl.textContent=n;badgeEl.hidden=false}else{badgeEl.hidden=true}}
+
+  function render(){
+    const list=load(); listEl.innerHTML='';
+    if(!list.length){headEl.style.display='none';
+      listEl.innerHTML='<div class="saved-empty">No saved patients yet.</div>';
+      updateBadge(0); return;}
+    headEl.style.display='block'; countEl.textContent='('+list.length+')'; updateBadge(list.length);
+    list.slice().reverse().forEach(p=>{
+      const bits=[];
+      if(p.age)bits.push(p.age+'y'); if(p.sex)bits.push(p.sex);
+      if(p.type)bits.push(p.type); if(p.hba1c)bits.push('HbA1c '+p.hba1c+'%');
+      const meta=bits.join(' · ')||(p.id?'ID '+p.id:'—');
+      let pill='';
+      if(p.result&&p.result.pred){
+        const col=(window.CLASS_COLOR&&window.CLASS_COLOR[p.result.pred])||'#93a0c0';
+        const cf=p.result.confidence!=null?' '+Math.round(p.result.confidence*100)+'%':'';
+        pill=`<span class="presult" style="color:${col}">${p.result.pred}${cf}</span>`;
+      }
+      const row=document.createElement('div'); row.className='prow';
+      row.innerHTML=`<div class="pinfo">
+          <div class="pn">${esc(p.name||'Unnamed')}${p.id?' · '+esc(p.id):''}</div>
+          <div class="pmeta">${esc(meta)}</div></div>
+        ${pill}
+        <div class="pact"><button class="load" data-id="${p.pid}">Load</button>
+        <button class="del" data-id="${p.pid}">Delete</button></div>`;
+      listEl.appendChild(row);
+    });
+    listEl.querySelectorAll('.load').forEach(b=>b.onclick=()=>loadRecord(b.dataset.id));
+    listEl.querySelectorAll('.del').forEach(b=>b.onclick=()=>delRecord(b.dataset.id));
+  }
+
+  function saveRecord(){
+    const data=readForm();
+    if(!data.name&&!data.id){alert('Please enter at least a name or a patient ID.');return}
+    if(attachBox.checked&&window.lastResult)
+      data.result={pred:window.lastResult.pred, confidence:window.lastResult.confidence};
+    const list=load();
+    if(editingId){
+      const i=list.findIndex(r=>r.pid===editingId);
+      if(i>-1){data.pid=editingId; data.created=list[i].created; data.updated=Date.now();
+        if(!data.result&&list[i].result)data.result=list[i].result;   // keep prior result
+        list[i]=data;}
+    }else{data.pid=uid(); data.created=Date.now(); data.updated=data.created; list.push(data);}
+    save(list); render(); clearForm();
+  }
+  function loadRecord(pid){
+    const p=load().find(r=>r.pid===pid); if(!p)return;
+    fillForm(p); editingId=pid;
+    hint.textContent='Editing '+(p.name||p.id||'record');
+    const body=document.querySelector('.modal-body'); if(body)body.scrollTop=0;
+    F.name.focus();
+  }
+  function delRecord(pid){
+    const p=load().find(r=>r.pid===pid); if(!p)return;
+    if(!confirm(`Delete patient "${p.name||p.id||'record'}"? This cannot be undone.`))return;
+    save(load().filter(r=>r.pid!==pid)); if(editingId===pid)clearForm(); render();
+  }
+  function exportCsv(){
+    const list=load(); if(!list.length){alert('No saved patients to export.');return}
+    const cols=['patient_id','name','age','sex','diabetes_type','years_since_diagnosis',
+                'hba1c','notes','screening_result','screening_confidence'];
+    const q=v=>{const s=v==null?'':String(v);return /[",\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s};
+    const lines=[cols.join(',')];
+    list.forEach(p=>lines.push([p.id||p.pid,p.name,p.age,p.sex,p.type,p.duration,p.hba1c,p.notes,
+      p.result?p.result.pred:'', p.result&&p.result.confidence!=null?p.result.confidence.toFixed(4):''
+    ].map(q).join(',')));
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(new Blob([lines.join('\n')],{type:'text/csv'}));
+    a.download='neuroscreen_patients.csv'; a.click(); URL.revokeObjectURL(a.href);
+  }
+
+  const modal=document.getElementById('profileModal');
+  document.getElementById('profileBtn').onclick=()=>{
+    modal.hidden=false; document.body.style.overflow='hidden'; F.name.focus();};
+  const close=()=>{modal.hidden=true; document.body.style.overflow='';};
+  document.getElementById('modalClose').onclick=close;
+  modal.addEventListener('click',e=>{if(e.target===modal)close()});
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!modal.hidden)close()});
+  document.getElementById('pSave').onclick=saveRecord;
+  document.getElementById('pNew').onclick=clearForm;
+  document.getElementById('pExport').onclick=exportCsv;
+  render();
+})();
 </script>
 </body>
 </html>
