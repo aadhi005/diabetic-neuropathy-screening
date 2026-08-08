@@ -9,8 +9,15 @@ It is built as a **novel synthesis of two research papers**:
 
 | Paper | Modality | Method reproduced here |
 |-------|----------|------------------------|
-| Mengarelli et&nbsp;al., *IEEE TNSRE* 2024 — *Screening from Standing Balance* | Center-of-pressure (COP) sway during quiet standing | Multi-domain COP features + **kNN majority-voting ensemble** across AP / ML / statokinesigram components |
-| Talha et&nbsp;al., *IEEE Access* 2026 — *Multimodal Wearable Sensors* | Gait (IMU) + plantar pressure + HRV during a walk | **Gradient-boosting** classifier + SHAP-style feature attribution |
+| **Paper 1** (verified) — A. Mengarelli, A. Tigrini, F. Verdini, M. Scattolini, R. Mobarak, L. Burattini, R. A. Rabini, S. Fioretti, "A Computer-Aided Screening Solution for the Identification of Diabetic Neuropathy From Standing Balance by Leveraging Multi-Domain Features," *IEEE Trans. Neural Syst. Rehabil. Eng.*, vol. 32, pp. 2388–2397, 2024 | Center-of-pressure (COP) sway during quiet standing | Multi-domain COP features + **kNN majority-voting ensemble** across AP / ML / statokinesigram components, and **both diagnosis pathways** (DP-1 and DP-2) |
+| **Paper 2** (citation unverified — see note) — *Physiological Features for Classification of Different Types of Peripheral Neuropathy Using Multimodal Wearable Sensors* | Gait (IMU) + plantar pressure + HRV during a walk | **Gradient-boosting** classifier + SHAP-style feature attribution |
+
+> **Citation note.** Paper 1's bibliographic details above were read directly
+> from the PDF. Paper 2's source PDF is not present in this workspace, so its
+> authors, venue, year and reported accuracy have **not** been verified and are
+> deliberately omitted rather than guessed. Its linked dataset (IEEE DataPort,
+> DOI `10.21227/f4jr-k711`) was independently confirmed to exist and to carry
+> DPN/CAN labels. Re-add the full citation once the PDF is available.
 
 ### The idea / what's new
 Paper 1 screens *peripheral* severity from posture; Paper 2 screens *type* of
@@ -18,15 +25,23 @@ neuropathy from a walk. Neither sees the other's blind spot. NeuroScreen fuses
 both feature spaces into a single model and shows, quantitatively, **why the
 fusion is necessary**:
 
-- Posture COP ensemble on the three severity stages (NN / AN / SN): **86.5%**
-  accuracy — reproduces Paper 1's "over 86%".
+- **DP-1** — Paper 1's single 3-class model over the severity stages
+  (NN / AN / SN): **86.5%**, reproducing the paper's "over 86%".
+- **DP-2** — Paper 1's two-stage cascade, `(NN+AN) vs SN` then `NN vs AN`:
+  **95.2%**. The paper reports this pathway beating DP-1 (>97%), which is what
+  makes *asymptomatic* detection viable; DP-1's ~86% does not support it.
 - The *same* posture model asked to also flag cardiac autonomic neuropathy
   (CAN): drops to **70.9%** — balance data is largely blind to autonomic
   involvement.
-- Fused multi-modal gradient boosting on all four classes: **98.3%** — matches
-  Paper 2's reported 98.27%.
+- Fused multi-modal gradient boosting on all four classes: **98.3%**.
 
 All figures are leave-one-subject-out cross-validated.
+
+> **These four numbers come from synthetic data.** They demonstrate that the
+> pipeline reproduces the papers' methods and reported *behaviour*; they are not
+> evidence of real-world accuracy. On real patients the same pipeline scores
+> **70.0%** (see *Screening a real person* below) — that gap is the honest
+> headline, and the dashboard labels every figure with its provenance.
 
 ---
 
@@ -47,6 +62,12 @@ To regenerate the cohort, features and model:
 python -m neuroscreen.train      # ~2 min; writes web/model.json + data/features.csv
 ```
 
+Run the tests:
+
+```bash
+python -m pytest tests/ -q       # 42 tests, ~17 s
+```
+
 ---
 
 ## What the dashboard does
@@ -59,8 +80,15 @@ python -m neuroscreen.train      # ~2 min; writes web/model.json + data/features
   with its 95% confidence ellipse.
 - **Why this decision** — importance-weighted feature attribution showing which
   markers pushed the case toward health vs. neuropathy.
-- **Validated model performance** — switch between the three pathways and view
-  per-class precision / sensitivity / specificity and the confusion matrix.
+- **Patient profile** — the header avatar opens a record form (name, ID, age,
+  sex, diabetes type, HbA1c, notes). Records persist in browser storage, can
+  carry the current screening result, and export as a CSV that
+  `neuroscreen.detect` reads straight into the SQLite database.
+- **Validated model performance** — switch between the pathways (DP-1, DP-2,
+  all-classes, fused) **and the real-patient model**, with per-class precision /
+  sensitivity / specificity and the confusion matrix. A provenance banner under
+  the tabs states whether the figures on screen are synthetic or from real
+  patients, so the two can never be confused.
 
 ---
 
@@ -89,7 +117,15 @@ These 65 COP features are fused with 13 wearable gait/pressure/HRV markers →
 
 ### Models (`neuroscreen/models.py`)
 - `ComponentEnsemble` — a kNN per COP component combined by majority / soft vote
-  (Paper 1).
+  (Paper 1), optionally with per-component backward feature selection.
+- `DiagnosisPathway2` — Paper 1's DP-2 cascade: stage 1 separates symptomatic
+  neuropathy `(NN+AN) vs SN`, stage 2 then splits `NN vs AN` among the rest.
+  Stage 2 is fitted only on non-symptomatic patients, matching deployment.
+- `backward_feature_selection` — the paper's B-FS: greedy backward elimination
+  repeated over random half-splits, keeping features chosen by at least half the
+  runs. Off by default for headline figures: at ~45 s per COP block it cannot be
+  nested inside leave-one-subject-out (~8 h), and running it once over the whole
+  cohort would leak test subjects into selection and inflate the result.
 - `build_gradient_boosting` — gradient boosting over the fused vector (Paper 2),
   whose `feature_importances_` drive the dashboard's explanations.
 
@@ -98,17 +134,25 @@ These 65 COP features are fused with 13 wearable gait/pressure/HRV markers →
 ## Project layout
 ```
 neuroscreen/
-  signals.py     synthetic COP + wearable cohort generator
-  features.py    multi-domain COP feature extraction
-  models.py      kNN ensemble, gradient boosting, metrics
-  train.py       pipeline: generate -> extract -> LOSO eval -> export
+  signals.py      synthetic COP + wearable cohort generator
+  features.py     multi-domain COP feature extraction
+  models.py       kNN ensemble, DP-2 cascade, B-FS, gradient boosting, metrics
+  train.py        pipeline: generate -> extract -> LOSO eval -> export
+  dataset.py      tolerant wearable-CSV ingestion (synonyms + units)
+  realdata.py     loaders for specific public datasets
+  realtrain.py    train + persist the real-person model
+  export_real.py  real model -> web/realmodel.js for the dashboard
+  detect.py       screen a subject; writes results to the database
+  db.py           SQLite storage for patients and screenings
+  fetch_data.py   download the open PhysioNet dataset
 web/
-  index.html     self-contained clinical dashboard (no external libraries)
-  model.js       exported classifier + metrics (browser-runnable)
-  model.json     same, as JSON
+  index.html      self-contained clinical dashboard (no external libraries)
+  model.js        exported synthetic classifier + metrics (browser-runnable)
+  realmodel.js    exported real-patient model + metrics
+tests/            42 tests: features, ingestion, DP-2, metrics, database
 data/
-  features.csv   full feature table for the cohort
-run.py           train (if needed) + serve the dashboard
+  features.csv    full feature table for the cohort
+run.py            train (if needed) + serve the dashboard
 ```
 
 ---
@@ -156,7 +200,17 @@ python -m neuroscreen.detect --input data/subject.csv --json
 Output per subject: predicted class, confidence, clinical risk level, the
 markers that most drove the decision (deviation from the control reference
 weighted by model importance), and a recommendation. The detector matches your
-CSV's columns to the model's features by name and imputes anything missing.
+CSV's columns to the model's features by name — tolerating synonyms and units,
+so `RMSSD`, `rmssd (ms)` and `SDNN [ms]` all resolve — and imputes anything
+missing with the training median, reporting what it imputed.
+
+### Step 4 — show the real model in the dashboard
+```bash
+python -m neuroscreen.export_real   # writes web/realmodel.js
+```
+Adds a **Real patients** tab to the dashboard's metrics panel next to the
+synthetic pathways, so the 70% real result and the 98.3% synthetic one are
+visible side by side and each is labelled with its data source.
 
 ### Patient database
 Every screening is written to a local **SQLite** database
