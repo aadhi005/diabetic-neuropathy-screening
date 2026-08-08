@@ -88,6 +88,13 @@
   .cm .hd{background:transparent;color:var(--mut);font-weight:600;font-size:11px}
   footer{margin-top:26px;color:#6f7fa6;font-size:11.5px;line-height:1.7}
   .pill{display:inline-block;background:#1b2853;border:1px solid #2b3c72;border-radius:6px;padding:1px 7px;color:#bcd0ff;font-size:11px}
+  /* ===== data provenance banner ===== */
+  .provenance{display:flex;align-items:flex-start;gap:9px;margin:0 0 14px;padding:9px 12px;
+    border-radius:10px;font-size:12px;line-height:1.5;border:1px solid}
+  .provenance b{font-weight:700}
+  .prov-synthetic{background:#2a1f08;border-color:#5c4410;color:#f5c869}
+  .prov-real{background:#0c2a1c;border-color:#155e42;color:#5ee9b5}
+  .prov-ico{flex:0 0 auto;font-size:13px;line-height:1.35}
   /* ===== patient profile ===== */
   .headtext{flex:1;min-width:0}
   .profile-btn{position:relative;flex:0 0 auto;width:46px;height:46px;padding:0;border-radius:50%;
@@ -246,6 +253,7 @@
       <div class="card" style="margin-top:18px">
         <h2>Validated model performance <span class="hint">leave-one-subject-out</span></h2>
         <div class="tabs" id="tabs"></div>
+        <div class="provenance" id="provenance"></div>
         <div class="cols">
           <div>
             <div class="acc-big" id="mAcc">—</div>
@@ -350,10 +358,20 @@
 </div>
 
 <script src="model.js"></script>
+<script src="realmodel.js"></script>
 <script>
 const M = window.MODEL;
-const CLASS_COLOR = {NN:'#22c55e',AN:'#f5b942',SN:'#ef4444',CAN:'#a855f7'};
+const R = window.REALMODEL || null;      // real-patient model, if exported
+const CLASS_COLOR = {NN:'#22c55e',AN:'#f5b942',SN:'#ef4444',CAN:'#a855f7',
+                     Control:'#22c55e',Diabetic:'#ef4444',
+                     Healthy:'#22c55e',DPN:'#ef4444',CAN_:'#a855f7'};
 window.CLASS_COLOR = CLASS_COLOR;   // consumed by the patient-profile module
+
+/* Every metrics tab the panel can show. The synthetic pathways come from
+   model.js; the real-patient pathway (if realmodel.js was exported) is
+   appended so the two are always visible side by side and can't be confused. */
+const ALL_METRICS = Object.assign({}, M.metrics,
+  R && R.metrics ? {real: R.metrics.real} : {});
 const RISK = {
   NN:{t:'Low risk',c:'#0f2b18',fg:'#4ade80'},
   AN:{t:'Early neuropathy — monitor',c:'#332608',fg:'#fbbf24'},
@@ -474,8 +492,29 @@ function explain(rows){
 
 /* ---------- metrics panel ---------- */
 let curTab;
+function provenance(key){
+  const el=document.getElementById('provenance');
+  if(!el) return;
+  if(key==='real'){
+    const n=R&&R.n_subjects?R.n_subjects:'?';
+    const ds=(R&&R.dataset)||'real dataset';
+    el.className='provenance prov-real';
+    el.innerHTML=`<span class="prov-ico">&#9679;</span><span><b>Real patient data.</b>
+      ${ds} &mdash; <b>${n} real subjects</b>, leave-one-subject-out validated.
+      These figures come from actual patients, not simulation.</span>`;
+  }else{
+    el.className='provenance prov-synthetic';
+    el.innerHTML=`<span class="prov-ico">&#9679;</span><span><b>Synthetic demonstration data.</b>
+      ${M.reference.y.length} simulated subjects generated from the papers' reported
+      class behaviour. This validates that the <i>pipeline</i> works end to end &mdash;
+      it is <b>not</b> evidence of real-world accuracy. Switch to the
+      &ldquo;Real patients&rdquo; tab for results on actual subjects.</span>`;
+  }
+}
+
 function renderMetrics(key){
-  curTab=key; const m=M.metrics[key], labels=m.labels;
+  curTab=key; const m=ALL_METRICS[key], labels=m.labels;
+  provenance(key);
   document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('on',t.dataset.k===key));
   document.getElementById('mAcc').textContent=(m.accuracy*100).toFixed(1)+'%';
   document.getElementById('mName').textContent=m.name;
@@ -546,8 +585,10 @@ function initExamples(){
 }
 function initTabs(){
   const el=document.getElementById('tabs');
-  Object.keys(M.metrics).forEach(k=>{
-    const short={posture:'Posture pathway (Paper 1)',ensemble:'Posture · all classes',gb:'Multi-modal fusion (novel)'};
+  Object.keys(ALL_METRICS).forEach(k=>{
+    const short={posture:'DP-1 · 3-class (Paper 1)',dp2:'DP-2 · cascade (Paper 1)',
+                 ensemble:'Posture · all classes',gb:'Multi-modal fusion (novel)',
+                 real:'★ Real patients'};
     el.insertAdjacentHTML('beforeend',`<div class="tab" data-k="${k}">${short[k]||k}</div>`);
   });
   el.querySelectorAll('.tab').forEach(t=>t.onclick=()=>renderMetrics(t.dataset.k));
