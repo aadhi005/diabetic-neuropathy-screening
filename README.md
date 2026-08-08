@@ -10,14 +10,15 @@ It is built as a **novel synthesis of two research papers**:
 | Paper | Modality | Method reproduced here |
 |-------|----------|------------------------|
 | **Paper 1** (verified) — A. Mengarelli, A. Tigrini, F. Verdini, M. Scattolini, R. Mobarak, L. Burattini, R. A. Rabini, S. Fioretti, "A Computer-Aided Screening Solution for the Identification of Diabetic Neuropathy From Standing Balance by Leveraging Multi-Domain Features," *IEEE Trans. Neural Syst. Rehabil. Eng.*, vol. 32, pp. 2388–2397, 2024 | Center-of-pressure (COP) sway during quiet standing | Multi-domain COP features + **kNN majority-voting ensemble** across AP / ML / statokinesigram components, and **both diagnosis pathways** (DP-1 and DP-2) |
-| **Paper 2** (citation unverified — see note) — *Physiological Features for Classification of Different Types of Peripheral Neuropathy Using Multimodal Wearable Sensors* | Gait (IMU) + plantar pressure + HRV during a walk | **Gradient-boosting** classifier + SHAP-style feature attribution |
+| **Paper 2** — M. Talha, M. Kyrarini, E. A. Buriro, "Physiological Features for Classification of Different Types of Peripheral Neuropathy Using Multimodal Wearable Sensors," *IEEE Access*, vol. 14, 2026, doi: [10.1109/ACCESS.2026.3652722](https://doi.org/10.1109/ACCESS.2026.3652722) | Gait (2 IMUs) + 8-point plantar pressure + ECG-derived HRV, sampled at 100 Hz | **Gradient-boosting** classifier + SHAP-style feature attribution |
 
-> **Citation note.** Paper 1's bibliographic details above were read directly
-> from the PDF. Paper 2's source PDF is not present in this workspace, so its
-> authors, venue, year and reported accuracy have **not** been verified and are
-> deliberately omitted rather than guessed. Its linked dataset (IEEE DataPort,
-> DOI `10.21227/f4jr-k711`) was independently confirmed to exist and to carry
-> DPN/CAN labels. Re-add the full citation once the PDF is available.
+> **Citation note.** Paper 1's details were read directly from its PDF.
+> Paper 2's PDF is not in this workspace; its authors, venue, year and DOI above
+> were verified against [IEEE Xplore](https://ieeexplore.ieee.org/document/11345454/)
+> and the authors' own [IEEE DataPort dataset](https://ieee-dataport.org/documents/ecg-imus-and-foot-plantar-pressure-signals-gait-and-health-monitoring)
+> (DOI `10.21227/f4jr-k711`), which lists the same three authors.
+> Its **reported accuracy and per-group cohort sizes remain unverified** — both
+> sources are paywalled — so no such figure is claimed anywhere in this repo.
 
 ### The idea / what's new
 Paper 1 screens *peripheral* severity from posture; Paper 2 screens *type* of
