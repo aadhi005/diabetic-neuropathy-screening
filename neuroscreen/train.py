@@ -24,8 +24,8 @@ import numpy as np
 from sklearn.model_selection import LeaveOneOut
 
 from .features import extract_cop_features
-from .models import (ComponentEnsemble, build_gradient_boosting, confusion,
-                     per_class_metrics)
+from .models import (ComponentEnsemble, DiagnosisPathway2,
+                     build_gradient_boosting, confusion, per_class_metrics)
 from .signals import (CLASS_NAMES, CLASSES, FS, build_cohort,
                       generate_wearable)
 
@@ -84,6 +84,13 @@ def main():
         lambda: ComponentEnsemble(names, k=3), Xp, yp, ["NN", "AN", "SN"])
     print(f"      Posture COP ensemble, NN/AN/SN (Paper 1) accuracy = {pos_acc*100:.1f}%")
 
+    # Paper-1 DP-2: the two-stage cascade -- (NN+AN) vs SN, then NN vs AN.
+    # The paper reports this beating the single 3-class model, which is what
+    # makes early (asymptomatic) detection viable; DP-1's ~86% does not.
+    dp2_acc, dp2_rows, dp2_cm = loso_eval(
+        lambda: DiagnosisPathway2(names, k=3), Xp, yp, ["NN", "AN", "SN"])
+    print(f"      Posture DP-2 cascade, NN/AN/SN (Paper 1) accuracy = {dp2_acc*100:.1f}%")
+
     # Same ensemble asked to screen ALL four classes, including CAN, to show
     # why posture alone is insufficient for autonomic involvement.
     ens_acc, ens_rows, ens_cm = loso_eval(
@@ -136,6 +143,10 @@ def main():
                         "labels": ["NN", "AN", "SN"],
                         "accuracy": pos_acc, "per_class": pos_rows,
                         "confusion": pos_cm},
+            "dp2": {"name": "Posture DP-2 two-stage cascade (Paper 1)",
+                    "labels": ["NN", "AN", "SN"],
+                    "accuracy": dp2_acc, "per_class": dp2_rows,
+                    "confusion": dp2_cm},
             "ensemble": {"name": "Posture COP ensemble - all 4 classes",
                          "labels": CLASSES,
                          "accuracy": ens_acc, "per_class": ens_rows,
