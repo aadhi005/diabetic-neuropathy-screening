@@ -92,6 +92,24 @@ def _norm(s: str) -> str:
     return re.sub(r"[^a-z0-9]", "", str(s).lower())
 
 
+# Real exports almost always carry units in the header -- "RMSSD (ms)",
+# "LF (ms^2)", "Forefoot peak [kPa]". Plain normalisation turns those into
+# "rmssdms" / "lfms2", which match nothing, so the column would be silently
+# dropped. Strip bracketed groups and trailing unit tokens before matching.
+_BRACKETED = re.compile(r"[\(\[\{][^\)\]\}]*[\)\]\}]")
+_UNIT_TOKENS = {
+    "ms", "msec", "s", "sec", "hz", "kpa", "pa", "mmhg", "bpm",
+    "deg", "degree", "degrees", "rad", "percent", "pct",
+    "mm", "cm", "m", "g", "n", "ms2", "msec2", "au", "ratio", "mean", "avg",
+}
+
+
+def _norm_no_units(s: str) -> str:
+    s = _BRACKETED.sub(" ", str(s).lower())
+    parts = [p for p in re.split(r"[^a-z0-9]+", s) if p and p not in _UNIT_TOKENS]
+    return "".join(parts)
+
+
 def _build_reverse_synonyms():
     rev = {}
     for canon, syns in SYNONYMS.items():
@@ -108,7 +126,9 @@ def map_columns(columns):
     """Return {source_column: canonical_key} for columns we recognise."""
     mapping = {}
     for col in columns:
-        key = _REV.get(_norm(col))
+        # Exact normalised match first; fall back to a unit-stripped match so
+        # "RMSSD (ms)" still resolves, without letting units create collisions.
+        key = _REV.get(_norm(col)) or _REV.get(_norm_no_units(col))
         if key and key not in mapping.values():
             mapping[col] = key
     return mapping
