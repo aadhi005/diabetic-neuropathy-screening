@@ -288,43 +288,43 @@
  "importances": [
   {
    "feature": "DBP TILT BASELINE1",
-   "importance": 0.20915430531319465
+   "importance": 0.2091439894063768
   },
   {
    "feature": "HR TILT BASELINE",
-   "importance": 0.2036226444744363
+   "importance": 0.20361107107857995
   },
   {
    "feature": "SPEED(m/s)",
-   "importance": 0.14621456949597628
+   "importance": 0.14624086912293016
   },
   {
    "feature": "sys_BP(Baseline MR)",
-   "importance": 0.1408910614438472
+   "importance": 0.14104401108781645
   },
   {
    "feature": "SBP TILT BASELINE1",
-   "importance": 0.1160005101703416
+   "importance": 0.11605767921696868
   },
   {
    "feature": "dia_BP(Hypo Mean)",
-   "importance": 0.09341191225686844
+   "importance": 0.09324775842376751
   },
   {
    "feature": "mn_BP(Tilt MN)",
-   "importance": 0.052498705984355284
+   "importance": 0.0521711331473516
   },
   {
    "feature": "VMR dia_BP",
-   "importance": 0.02201953380263217
+   "importance": 0.02218025604691705
   },
   {
    "feature": "VMR sys_BP",
-   "importance": 0.00832398046023558
+   "importance": 0.008199008406653623
   },
   {
    "feature": "Change Baseline To Tilt Mean BP",
-   "importance": 0.007862776597843185
+   "importance": 0.008104224062368628
   },
   {
    "feature": "VM RATIO",
@@ -399,6 +399,7 @@
    "importance": 0.0
   }
  ],
+ "baseline": 0.56,
  "metrics": {
   "real": {
    "name": "Real patients - PhysioNet Cerebral Vasoregulation in Diabetes",
@@ -407,6 +408,11 @@
     "Diabetic"
    ],
    "accuracy": 0.7,
+   "ci": {
+    "lo": 0.562493877226366,
+    "hi": 0.8089661091039063,
+    "n": 50
+   },
    "per_class": {
     "Control": {
      "precision": 0.6842105263157895,

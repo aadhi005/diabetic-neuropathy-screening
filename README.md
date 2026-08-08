@@ -25,23 +25,30 @@ neuropathy from a walk. Neither sees the other's blind spot. NeuroScreen fuses
 both feature spaces into a single model and shows, quantitatively, **why the
 fusion is necessary**:
 
-- **DP-1** — Paper 1's single 3-class model over the severity stages
-  (NN / AN / SN): **86.5%**, reproducing the paper's "over 86%".
-- **DP-2** — Paper 1's two-stage cascade, `(NN+AN) vs SN` then `NN vs AN`:
-  **95.2%**. The paper reports this pathway beating DP-1 (>97%), which is what
-  makes *asymptomatic* detection viable; DP-1's ~86% does not support it.
-- The *same* posture model asked to also flag cardiac autonomic neuropathy
-  (CAN): drops to **70.9%** — balance data is largely blind to autonomic
-  involvement.
-- Fused multi-modal gradient boosting on all four classes: **98.3%**.
+| Pathway | Accuracy | 95% CI | n |
+|---|---|---|---|
+| **DP-1** — Paper 1's single 3-class model (NN / AN / SN) | 86.5% | 79–92% | 104 |
+| **DP-2** — Paper 1's cascade, `(NN+AN) vs SN` then `NN vs AN` | **95.2%** | 89–98% | 104 |
+| Posture ensemble asked to also flag CAN | 70.9% | 62–78% | 117 |
+| Fused multi-modal gradient boosting, 4 classes | 98.3% | 94–100% | 117 |
 
-All figures are leave-one-subject-out cross-validated.
+DP-2's interval barely overlaps DP-1's, so the cascade is a real improvement,
+not noise — and it is the pathway that makes *asymptomatic* detection viable,
+which DP-1's ~86% does not support. The posture-only row shows balance data is
+largely blind to autonomic involvement, which is what motivates the fusion.
+
+All figures are leave-one-subject-out cross-validated, with Wilson score
+intervals.
 
 > **These four numbers come from synthetic data.** They demonstrate that the
 > pipeline reproduces the papers' methods and reported *behaviour*; they are not
-> evidence of real-world accuracy. On real patients the same pipeline scores
-> **70.0%** (see *Screening a real person* below) — that gap is the honest
-> headline, and the dashboard labels every figure with its provenance.
+> evidence of real-world accuracy.
+>
+> On real patients the same pipeline scores **70.0% (95% CI 56–81%, n=50)**
+> against a majority-class baseline of **56%** — the interval's lower bound
+> clears chance by 0.2 points, so on this cohort the result is **statistically
+> inconclusive**. That gap between 98.3% and "inconclusive" is the honest
+> headline of this project, and the dashboard labels every figure accordingly.
 
 ---
 
@@ -49,8 +56,13 @@ All figures are leave-one-subject-out cross-validated.
 
 ```bash
 pip install -r requirements.txt
-python run.py            # trains if needed, then opens the dashboard
+python run.py            # builds whatever is missing, then opens the dashboard
 ```
+
+`run.py` builds both exports the dashboard needs — the synthetic pathways and,
+when the PhysioNet CSV is present, the real-patient model. Use `--train` to
+force-rebuild the synthetic model, `--all` to rebuild both, `--no-serve` to
+build without starting the server.
 
 Then open <http://localhost:8777>. The dashboard also opens directly by
 double-clicking `web/index.html` (the model is bundled as `web/model.js`, so no
@@ -65,7 +77,7 @@ python -m neuroscreen.train      # ~2 min; writes web/model.json + data/features
 Run the tests:
 
 ```bash
-python -m pytest tests/ -q       # 42 tests, ~17 s
+python -m pytest tests/ -q       # 50 tests, ~17 s
 ```
 
 ---
@@ -149,7 +161,7 @@ web/
   index.html      self-contained clinical dashboard (no external libraries)
   model.js        exported synthetic classifier + metrics (browser-runnable)
   realmodel.js    exported real-patient model + metrics
-tests/            42 tests: features, ingestion, DP-2, metrics, database
+tests/            50 tests: features, ingestion, DP-2, metrics, database
 data/
   features.csv    full feature table for the cohort
 run.py            train (if needed) + serve the dashboard

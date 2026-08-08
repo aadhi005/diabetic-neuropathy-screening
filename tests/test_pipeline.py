@@ -13,7 +13,8 @@ import pytest
 from neuroscreen import dataset as ds
 from neuroscreen import db as ndb
 from neuroscreen.models import (ComponentEnsemble, DiagnosisPathway2,
-                                confusion, per_class_metrics)
+                                accuracy_with_ci, backward_feature_selection,
+                                confusion, per_class_metrics, wilson_interval)
 
 
 # --------------------------------------------------------------------------
@@ -147,6 +148,72 @@ def test_component_ensemble_uses_only_its_own_block():
     ens = ComponentEnsemble(names, k=3).fit(X, y)
     for comp, idx in ens.blocks.items():
         assert all(names[i].startswith(comp + "_") for i in idx)
+
+
+# --------------------------------------------------------------------------
+# Backward feature selection
+# --------------------------------------------------------------------------
+def test_bfs_selects_a_strict_subset_and_keeps_signal():
+    """B-FS must reduce the block while retaining the discriminative column."""
+    rng = np.random.default_rng(0)
+    n = 40
+    signal = np.concatenate([rng.normal(0, .3, n), rng.normal(5, .3, n)])
+    noise = rng.normal(0, 1, (2 * n, 6))
+    X = np.column_stack([noise[:, :3], signal, noise[:, 3:]])
+    y = np.array(["A"] * n + ["B"] * n)
+    sel = backward_feature_selection(X, y, k=3, n_runs=5, seed=0)
+    assert 0 < len(sel) < X.shape[1], "should drop at least one feature"
+    assert 3 in sel, "the only informative column must survive"
+
+
+def test_bfs_never_returns_an_empty_set():
+    rng = np.random.default_rng(1)
+    X, y = rng.normal(size=(20, 4)), np.array(["A"] * 10 + ["B"] * 10)
+    assert len(backward_feature_selection(X, y, k=3, n_runs=2, seed=0)) >= 1
+
+
+def test_ensemble_with_bfs_narrows_each_component():
+    X, y, names = _toy_cop(n=30)
+    ens = ComponentEnsemble(names, k=3, bfs=True, n_runs=3).fit(X, y)
+    for comp, sel in ens.selected.items():
+        assert 0 < len(sel) <= len(ens.blocks[comp])
+        assert all(names[i].startswith(comp + "_") for i in sel)
+    assert set(ens.predict(X)).issubset(set(y))
+
+
+def test_dp2_with_bfs_still_predicts_valid_labels():
+    X, y, names = _toy_cop(n=30)
+    pred = DiagnosisPathway2(names, k=3, bfs=True, n_runs=3).fit(X, y).predict(X)
+    assert set(pred).issubset({"NN", "AN", "SN"})
+
+
+# --------------------------------------------------------------------------
+# Confidence intervals
+# --------------------------------------------------------------------------
+def test_wilson_interval_brackets_the_estimate():
+    lo, hi = wilson_interval(35, 50)
+    assert lo < 0.70 < hi
+
+
+def test_wilson_interval_narrows_as_n_grows():
+    narrow = wilson_interval(700, 1000)
+    wide = wilson_interval(7, 10)
+    assert (narrow[1] - narrow[0]) < (wide[1] - wide[0])
+
+
+def test_wilson_interval_stays_within_zero_and_one():
+    """The normal approximation escapes [0,1] at the extremes; Wilson must not."""
+    for correct, total in [(0, 10), (10, 10), (1, 3)]:
+        lo, hi = wilson_interval(correct, total)
+        assert 0.0 <= lo <= hi <= 1.0
+
+
+def test_accuracy_with_ci_matches_plain_accuracy():
+    y_true = np.array(["A"] * 7 + ["B"] * 3)
+    y_pred = np.array(["A"] * 6 + ["B"] * 4)
+    acc, lo, hi, n = accuracy_with_ci(y_true, y_pred)
+    assert n == 10 and lo < acc < hi
+    assert acc == pytest.approx(np.mean(y_true == y_pred))
 
 
 # --------------------------------------------------------------------------

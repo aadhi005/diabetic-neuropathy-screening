@@ -88,6 +88,7 @@
   .cm .hd{background:transparent;color:var(--mut);font-weight:600;font-size:11px}
   footer{margin-top:26px;color:#6f7fa6;font-size:11.5px;line-height:1.7}
   .pill{display:inline-block;background:#1b2853;border:1px solid #2b3c72;border-radius:6px;padding:1px 7px;color:#bcd0ff;font-size:11px}
+  .ci-note{font-size:11.5px;color:#8fa0c8;margin:-2px 0 4px;font-variant-numeric:tabular-nums}
   /* ===== data provenance banner ===== */
   .provenance{display:flex;align-items:flex-start;gap:9px;margin:0 0 14px;padding:9px 12px;
     border-radius:10px;font-size:12px;line-height:1.5;border:1px solid}
@@ -257,6 +258,7 @@
         <div class="cols">
           <div>
             <div class="acc-big" id="mAcc">—</div>
+            <div class="ci-note" id="mCi"></div>
             <div style="color:var(--mut);font-size:12.5px" id="mName">—</div>
             <table style="margin-top:12px"><thead>
               <tr><th>Class</th><th>Prec.</th><th>Sens.</th><th>Spec.</th><th>n</th></tr>
@@ -517,6 +519,22 @@ function renderMetrics(key){
   provenance(key);
   document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('on',t.dataset.k===key));
   document.getElementById('mAcc').textContent=(m.accuracy*100).toFixed(1)+'%';
+  // A point estimate alone is misleading at these cohort sizes -- show the
+  // interval, and whether it actually clears the majority-class baseline.
+  const ciEl=document.getElementById('mCi');
+  if(ciEl){
+    if(m.ci&&m.ci.n){
+      const lo=m.ci.lo*100, hi=m.ci.hi*100;
+      let note=`95% CI ${lo.toFixed(0)}–${hi.toFixed(0)}% · n=${m.ci.n}`;
+      const base=(key==='real'&&R&&R.baseline)?R.baseline*100:null;
+      if(base!=null){
+        note+=` · baseline ${base.toFixed(0)}%`;
+        note+= lo>base ? (lo-base<5?' — only marginally above chance':' — above chance')
+                       : ' — not above chance';
+      }
+      ciEl.textContent=note;
+    } else ciEl.textContent='';
+  }
   document.getElementById('mName').textContent=m.name;
   const tb=document.getElementById('mTable'); tb.innerHTML='';
   labels.forEach(c=>{const r=m.per_class[c];

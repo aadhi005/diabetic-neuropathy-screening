@@ -73,11 +73,14 @@ def build_payload(model: dict) -> dict:
                             for c in classes}
                         for j, n in enumerate(names)},
         "importances": model.get("importances", []),
+        "baseline": (max(int(v) for v in report.get("class_counts", {1: 1}).values())
+                     / max(report.get("n_subjects", 1), 1)),
         "metrics": {
             "real": {
                 "name": f"Real patients - {report.get('dataset', 'dataset')}",
                 "labels": cv.get("labels", classes),
                 "accuracy": cv.get("accuracy", 0.0),
+                "ci": cv.get("ci", {}),
                 "per_class": cv.get("per_class", {}),
                 "confusion": cv.get("confusion", []),
                 "scheme": cv.get("scheme", ""),

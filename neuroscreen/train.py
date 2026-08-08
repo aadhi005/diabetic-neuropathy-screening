@@ -24,7 +24,7 @@ import numpy as np
 from sklearn.model_selection import LeaveOneOut
 
 from .features import extract_cop_features
-from .models import (ComponentEnsemble, DiagnosisPathway2,
+from .models import (ComponentEnsemble, DiagnosisPathway2, accuracy_with_ci,
                      build_gradient_boosting, confusion, per_class_metrics)
 from .signals import (CLASS_NAMES, CLASSES, FS, build_cohort,
                       generate_wearable)
@@ -61,7 +61,8 @@ def loso_eval(model_factory, X, y, labels):
         m.fit(X[tr], y[tr])
         preds[te[0]] = m.predict(X[te])[0]
     acc, rows = per_class_metrics(y, preds, labels)
-    return acc, rows, confusion(y, preds, labels).tolist()
+    _, lo, hi, n = accuracy_with_ci(y, preds)
+    return acc, rows, confusion(y, preds, labels).tolist(), {"lo": lo, "hi": hi, "n": n}
 
 
 def main():
@@ -80,27 +81,27 @@ def main():
     # cannot see. Reproduces the paper's standing-balance screening task.
     posture = np.array([lab in ("NN", "AN", "SN") for lab in y])
     Xp, yp = X[posture], y[posture]
-    pos_acc, pos_rows, pos_cm = loso_eval(
+    pos_acc, pos_rows, pos_cm, pos_ci = loso_eval(
         lambda: ComponentEnsemble(names, k=3), Xp, yp, ["NN", "AN", "SN"])
-    print(f"      Posture COP ensemble, NN/AN/SN (Paper 1) accuracy = {pos_acc*100:.1f}%")
+    print(f"      DP-1 posture ensemble, NN/AN/SN  = {pos_acc*100:.1f}%  (95% CI {pos_ci['lo']*100:.0f}-{pos_ci['hi']*100:.0f}%, n={pos_ci['n']})")
 
     # Paper-1 DP-2: the two-stage cascade -- (NN+AN) vs SN, then NN vs AN.
     # The paper reports this beating the single 3-class model, which is what
     # makes early (asymptomatic) detection viable; DP-1's ~86% does not.
-    dp2_acc, dp2_rows, dp2_cm = loso_eval(
+    dp2_acc, dp2_rows, dp2_cm, dp2_ci = loso_eval(
         lambda: DiagnosisPathway2(names, k=3), Xp, yp, ["NN", "AN", "SN"])
-    print(f"      Posture DP-2 cascade, NN/AN/SN (Paper 1) accuracy = {dp2_acc*100:.1f}%")
+    print(f"      DP-2 posture cascade, NN/AN/SN  = {dp2_acc*100:.1f}%  (95% CI {dp2_ci['lo']*100:.0f}-{dp2_ci['hi']*100:.0f}%, n={dp2_ci['n']})")
 
     # Same ensemble asked to screen ALL four classes, including CAN, to show
     # why posture alone is insufficient for autonomic involvement.
-    ens_acc, ens_rows, ens_cm = loso_eval(
+    ens_acc, ens_rows, ens_cm, ens_ci = loso_eval(
         lambda: ComponentEnsemble(names, k=3), X, y, CLASSES)
-    print(f"      Posture COP ensemble, all 4 classes      accuracy = {ens_acc*100:.1f}%")
+    print(f"      Posture ensemble, all 4 classes  = {ens_acc*100:.1f}%  (95% CI {ens_ci['lo']*100:.0f}-{ens_ci['hi']*100:.0f}%, n={ens_ci['n']})")
 
     # Novel fusion pathway (COP + gait + pressure + HRV) via gradient boosting.
-    gb_acc, gb_rows, gb_cm = loso_eval(
+    gb_acc, gb_rows, gb_cm, gb_ci = loso_eval(
         build_gradient_boosting, X, y, CLASSES)
-    print(f"      Fused multi-modal GB, all 4 classes       accuracy = {gb_acc*100:.1f}%")
+    print(f"      Fused multi-modal GB, 4 classes  = {gb_acc*100:.1f}%  (95% CI {gb_ci['lo']*100:.0f}-{gb_ci['hi']*100:.0f}%, n={gb_ci['n']})")
 
     print("[4/4] Training final models and exporting...")
     gb = build_gradient_boosting().fit(X, y)
@@ -141,19 +142,19 @@ def main():
         "metrics": {
             "posture": {"name": "Posture COP kNN ensemble - severity stages (Paper 1)",
                         "labels": ["NN", "AN", "SN"],
-                        "accuracy": pos_acc, "per_class": pos_rows,
+                        "accuracy": pos_acc, "ci": pos_ci, "per_class": pos_rows,
                         "confusion": pos_cm},
             "dp2": {"name": "Posture DP-2 two-stage cascade (Paper 1)",
                     "labels": ["NN", "AN", "SN"],
-                    "accuracy": dp2_acc, "per_class": dp2_rows,
+                    "accuracy": dp2_acc, "ci": dp2_ci, "per_class": dp2_rows,
                     "confusion": dp2_cm},
             "ensemble": {"name": "Posture COP ensemble - all 4 classes",
                          "labels": CLASSES,
-                         "accuracy": ens_acc, "per_class": ens_rows,
+                         "accuracy": ens_acc, "ci": ens_ci, "per_class": ens_rows,
                          "confusion": ens_cm},
             "gb": {"name": "Fused multi-modal gradient boosting (novel)",
                    "labels": CLASSES,
-                   "accuracy": gb_acc, "per_class": gb_rows, "confusion": gb_cm},
+                   "accuracy": gb_acc, "ci": gb_ci, "per_class": gb_rows, "confusion": gb_cm},
         },
         "examples": examples,
     }

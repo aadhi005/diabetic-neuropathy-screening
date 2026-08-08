@@ -25,7 +25,7 @@ from sklearn.model_selection import LeaveOneOut, StratifiedKFold
 from sklearn.preprocessing import StandardScaler
 
 from . import dataset as ds
-from .models import confusion, per_class_metrics
+from .models import accuracy_with_ci, confusion, per_class_metrics
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MODEL_DIR = os.path.join(ROOT, "models")
@@ -94,8 +94,10 @@ def _cv_eval(X, y, labels):
         clf = make_classifier(len(tr)).fit(sc.transform(X[tr]), y[tr])
         preds[te] = clf.predict(sc.transform(X[te]))
     acc, rows = per_class_metrics(y, preds, labels)
+    _, lo, hi, n = accuracy_with_ci(y, preds)
     scheme = "leave-one-subject-out" if use_loso else "stratified 5-fold"
-    return acc, rows, confusion(y, preds, labels).tolist(), scheme
+    return (acc, rows, confusion(y, preds, labels).tolist(), scheme,
+            {"lo": lo, "hi": hi, "n": n})
 
 
 def main():
@@ -113,8 +115,21 @@ def main():
           f"({source}); classes present: {present}")
 
     print("Cross-validating...")
-    acc, rows, cm, scheme = _cv_eval(X, y, present)
-    print(f"  {scheme} accuracy = {acc*100:.1f}%")
+    acc, rows, cm, scheme, ci = _cv_eval(X, y, present)
+    print(f"  {scheme} accuracy = {acc*100:.1f}%  "
+          f"(95% CI {ci['lo']*100:.0f}-{ci['hi']*100:.0f}%, n={ci['n']})")
+    # A bare accuracy hides whether the model beats simply always predicting
+    # the largest class. Compare the interval, not the point estimate.
+    base = max(int(np.sum(y == c)) for c in present) / len(y)
+    margin = ci["lo"] - base
+    if margin <= 0:
+        verdict = "NOT above chance -- the interval includes the baseline"
+    elif margin < 0.05:
+        verdict = (f"only marginally above chance (lower bound clears the "
+                   f"baseline by {margin*100:.1f} pts); treat as inconclusive")
+    else:
+        verdict = "above chance"
+    print(f"  majority-class baseline = {base*100:.1f}%  -> {verdict}")
     for c in present:
         r = rows[c]
         print(f"    {c:<8} sens={r['sensitivity']*100:4.0f}%  "
@@ -138,7 +153,7 @@ def main():
         "cohort_mean": X.mean(0).tolist(),
         "cohort_std": (X.std(0) + 1e-9).tolist(),
         "importances": _importances(clf, names),
-        "cv": {"scheme": scheme, "accuracy": acc, "per_class": rows,
+        "cv": {"scheme": scheme, "accuracy": acc, "ci": ci, "per_class": rows,
                "confusion": cm, "labels": present},
         "report": report,
     }

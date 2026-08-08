@@ -232,6 +232,32 @@ def per_class_metrics(y_true, y_pred, labels):
     return acc, rows
 
 
+def wilson_interval(correct, total, z=1.96):
+    """95% Wilson score interval for an accuracy.
+
+    Small biomedical cohorts make a bare accuracy misleading: 70% of 50
+    subjects and 70% of 5000 are not the same claim. Wilson is used rather
+    than the normal approximation because it stays inside [0, 1] and behaves
+    sensibly at small n and at proportions near 0 or 1.
+    """
+    if total <= 0:
+        return 0.0, 0.0
+    p, n = correct / total, float(total)
+    denom = 1.0 + z * z / n
+    centre = (p + z * z / (2 * n)) / denom
+    half = z * np.sqrt(p * (1 - p) / n + z * z / (4 * n * n)) / denom
+    return float(max(0.0, centre - half)), float(min(1.0, centre + half))
+
+
+def accuracy_with_ci(y_true, y_pred):
+    """(accuracy, lo, hi, n) with a 95% Wilson interval."""
+    y_true, y_pred = np.asarray(y_true), np.asarray(y_pred)
+    n = len(y_true)
+    correct = int(np.sum(y_true == y_pred))
+    lo, hi = wilson_interval(correct, n)
+    return (correct / n if n else 0.0), lo, hi, n
+
+
 def confusion(y_true, y_pred, labels):
     idx = {l: i for i, l in enumerate(labels)}
     M = np.zeros((len(labels), len(labels)), int)

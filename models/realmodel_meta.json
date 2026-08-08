@@ -38,6 +38,11 @@
   "cv": {
     "scheme": "leave-one-subject-out",
     "accuracy": 0.7,
+    "ci": {
+      "lo": 0.562493877226366,
+      "hi": 0.8089661091039063,
+      "n": 50
+    },
     "per_class": {
       "Control": {
         "precision": 0.6842105263157895,
@@ -69,7 +74,7 @@
   },
   "report": {
     "dataset": "PhysioNet Cerebral Vasoregulation in Diabetes",
-    "path": "data/physionet_diabetes/GE-71_Data_Summary_Table.csv",
+    "path": "C:\\Users\\adity\\Downloads\\main project 2026\\data\\physionet_diabetes\\GE-71_Data_Summary_Table.csv",
     "n_subjects": 50,
     "features_present": [
       "VM RATIO",
